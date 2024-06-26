@@ -10,81 +10,62 @@ import {
   ActionsSpecPostRequestBody,
   ActionsSpecPostResponse,
 } from '../../spec/actions-spec';
+import * as idl from '../../chancy/target/idl/chancy.json'
 import jupiterApi from './jupiter-api';
+import { Keypair, Connection, PublicKey, SystemProgram } from '@solana/web3.js';
+import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
+import { Program, BN, Idl, AnchorProvider, Wallet } from '@coral-xyz/anchor';
 
 export const JUPITER_LOGO =
-  'https://ucarecdn.com/09c80208-f27c-45dd-b716-75e1e55832c4/-/preview/1000x981/-/quality/smart/-/format/auto/';
+  'blob:https://imgur.com/9385c59d-80d9-4f03-891b-3e048140fa8c/';
+const providerKeypair = Keypair.fromSecretKey(
+  bs58.decode(process.env.KEY as string),
+);
+const connection = new Connection(process.env.NEXT_PUBLIC_RPC_URL as string)
+const program = new Program(idl as Idl, new AnchorProvider(connection, new Wallet(providerKeypair)))
 
-const SWAP_AMOUNT_USD_OPTIONS = [10, 100, 1000];
-const DEFAULT_SWAP_AMOUNT_USD = 10;
-const US_DOLLAR_FORMATTING = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
+const SWAP_AMOUNT_USD_OPTIONS = [0.1, 1, 2,4,8,16,32,64];
+const DEFAULT_SWAP_AMOUNT_USD = 0.1;
 
 const app = new OpenAPIHono();
+const [housePda] = PublicKey.findProgramAddressSync([Buffer.from('house'), providerKeypair.publicKey.toBuffer()], program.programId)
 
 app.openapi(
   createRoute({
     method: 'get',
-    path: '/{tokenPair}',
-    tags: ['Jupiter Swap'],
+    path: '/',
+    tags: ['BlinkFlip.Fun'],
     request: {
-      params: z.object({
-        tokenPair: z.string().openapi({
-          param: {
-            name: 'tokenPair',
-            in: 'path',
-          },
-          type: 'string',
-          example: 'USDC-SOL',
-        }),
-      }),
+      
     },
     responses: actionsSpecOpenApiGetResponse,
   }),
   async (c) => {
-    const tokenPair = c.req.param('tokenPair');
-
-    const [inputToken, outputToken] = tokenPair.split('-');
-    const [inputTokenMeta, outputTokenMeta] = await Promise.all([
-      jupiterApi.lookupToken(inputToken),
-      jupiterApi.lookupToken(outputToken),
-    ]);
-
-    if (!inputTokenMeta || !outputTokenMeta) {
-      return Response.json({
-        icon: JUPITER_LOGO,
-        label: 'Not Available',
-        title: `Buy ${outputToken}`,
-        description: `Buy ${outputToken} with ${inputToken}.`,
-        disabled: true,
-        error: {
-          message: `Token metadata not found.`,
-        },
-      } satisfies ActionsSpecGetResponse);
-    }
-
+    const balance = await connection.getBalance(housePda) 
     const amountParameterName = 'amount';
     const response: ActionsSpecGetResponse = {
       icon: JUPITER_LOGO,
-      label: `Buy ${outputTokenMeta.symbol}`,
-      title: `Buy ${outputTokenMeta.symbol}`,
-      description: `Buy ${outputTokenMeta.symbol} with ${inputTokenMeta.symbol}. Choose a USD amount of ${inputTokenMeta.symbol} from the options below, or enter a custom amount.`,
+      label: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
+      title: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
+      description: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}.
+      Your chance of winning is equal to half of the percentage of the SOL amount you put in...
+      if you send a link to blinkflip.fun/your-solami-address to someone, if they win, you get 1/4 what they do..
+      1/4 to dev..
+      1/4 to a VC for putting up 1sol to make this happen..
+      1/4 persists..`,
       links: {
         actions: [
           ...SWAP_AMOUNT_USD_OPTIONS.map((amount) => ({
-            label: `${US_DOLLAR_FORMATTING.format(amount)}`,
-            href: `/api/jupiter/swap/${tokenPair}/${amount}`,
+            label: `${(amount)}`,
+            href: `/play/${amount}/GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3`,
           })),
           {
-            href: `/api/jupiter/swap/${tokenPair}/{${amountParameterName}}`,
-            label: `Buy ${outputTokenMeta.symbol}`,
+            href: `/play/${amountParameterName}/GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3`,
+            label: `Play with custom amount`,
             parameters: [
               {
                 name: amountParameterName,
-                label: 'Enter a custom USD amount',
+                label: 'Enter a custom SOL amount',
               },
             ],
           },
@@ -98,93 +79,28 @@ app.openapi(
 
 app.openapi(
   createRoute({
-    method: 'get',
-    path: '/{tokenPair}/{amount}',
-    tags: ['Jupiter Swap'],
-    request: {
-      params: z.object({
-        tokenPair: z.string().openapi({
-          param: {
-            name: 'tokenPair',
-            in: 'path',
-          },
-          type: 'string',
-          example: 'USDC-SOL',
-        }),
-        amount: z
-          .string()
-          .optional()
-          .openapi({
-            param: {
-              name: 'amount',
-              in: 'path',
-              required: false,
-            },
-            type: 'number',
-            example: '1',
-          }),
-      }),
-    },
-    responses: actionsSpecOpenApiGetResponse,
-  }),
-  async (c) => {
-    const { tokenPair } = c.req.param();
-    const [inputToken, outputToken] = tokenPair.split('-');
-    const [inputTokenMeta, outputTokenMeta] = await Promise.all([
-      jupiterApi.lookupToken(inputToken),
-      jupiterApi.lookupToken(outputToken),
-    ]);
-
-    if (!inputTokenMeta || !outputTokenMeta) {
-      return Response.json({
-        icon: JUPITER_LOGO,
-        label: 'Not Available',
-        title: `Buy ${outputToken}`,
-        description: `Buy ${outputToken} with ${inputToken}.`,
-        disabled: true,
-        error: {
-          message: `Token metadata not found.`,
-        },
-      } satisfies ActionsSpecGetResponse);
-    }
-
-    const response: ActionsSpecGetResponse = {
-      icon: JUPITER_LOGO,
-      label: `Buy ${outputTokenMeta.symbol}`,
-      title: `Buy ${outputTokenMeta.symbol} with ${inputTokenMeta.symbol}`,
-      description: `Buy ${outputTokenMeta.symbol} with ${inputTokenMeta.symbol}.`,
-    };
-
-    return c.json(response);
-  },
-);
-
-app.openapi(
-  createRoute({
     method: 'post',
-    path: '/{tokenPair}/{amount}',
+    path: '/play/{amount}/{solamiAddress}',
     tags: ['Jupiter Swap'],
     request: {
       params: z.object({
-        tokenPair: z.string().openapi({
+        amount: z.string().openapi({
           param: {
-            name: 'tokenPair',
+            name: 'amount',
             in: 'path',
           },
-          type: 'string',
-          example: 'USDC-SOL',
+          type: 'number',
+          example: '1',
         }),
-        amount: z
+        ref: z
           .string()
-          .optional()
           .openapi({
             param: {
-              name: 'amount',
+              name: 'solamiAddress',
               in: 'path',
-              required: false,
             },
-            type: 'number',
-            example: '1',
+            type: 'string',
+            example: 'GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3',
           }),
       }),
       body: actionSpecOpenApiPostRequestBody,
@@ -192,68 +108,23 @@ app.openapi(
     responses: actionsSpecOpenApiPostResponse,
   }),
   async (c) => {
-    const tokenPair = c.req.param('tokenPair');
-    const amount = c.req.param('amount') ?? DEFAULT_SWAP_AMOUNT_USD.toString();
+    const solamiAddress = c.req.param('solamiAddress');
+    const amount = c.req.param('amount') ;
     const { account } = (await c.req.json()) as ActionsSpecPostRequestBody;
+    const tx = await program.methods.flip(new BN(parseFloat(amount) * 10 ** 9)).accounts({
+      house: housePda,
+      recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
+      referral: new PublicKey(solamiAddress),
+      signer: new PublicKey(account),
+      dev: providerKeypair.publicKey,
+      systemProgram: SystemProgram.programId,
+    }).transaction()
 
-    const [inputToken, outputToken] = tokenPair.split('-');
-    const [inputTokenMeta, outputTokenMeta] = await Promise.all([
-      jupiterApi.lookupToken(inputToken),
-      jupiterApi.lookupToken(outputToken),
-    ]);
-
-    if (!inputTokenMeta || !outputTokenMeta) {
-      return Response.json(
-        {
-          message: `Token metadata not found.`,
-        } satisfies ActionsSpecErrorResponse,
-        {
-          status: 422,
-        },
-      );
-    }
-    const tokenUsdPrices = await jupiterApi.getTokenPricesInUsdc([
-      inputTokenMeta.address,
-    ]);
-    const tokenPriceUsd = tokenUsdPrices[inputTokenMeta.address];
-    if (!tokenPriceUsd) {
-      return Response.json(
-        {
-          message: `Failed to get price for ${inputTokenMeta.symbol}.`,
-        } satisfies ActionsSpecErrorResponse,
-        {
-          status: 422,
-        },
-      );
-    }
-    const tokenAmount = parseFloat(amount) / tokenPriceUsd.price;
-    const tokenAmountFractional = Math.ceil(
-      tokenAmount * 10 ** inputTokenMeta.decimals,
-    );
-    console.log(
-      `Swapping ${tokenAmountFractional} ${inputTokenMeta.symbol} to ${outputTokenMeta.symbol}    
-  usd amount: ${amount}
-  token usd price: ${tokenPriceUsd.price}
-  token amount: ${tokenAmount}
-  token amount fractional: ${tokenAmountFractional}`,
-    );
-
-    const quote = await jupiterApi.quoteGet({
-      inputMint: inputTokenMeta.address,
-      outputMint: outputTokenMeta.address,
-      amount: tokenAmountFractional,
-      autoSlippage: true,
-      maxAutoSlippageBps: 500, // 5%,
-    });
-    const swapResponse = await jupiterApi.swapPost({
-      swapRequest: {
-        quoteResponse: quote,
-        userPublicKey: account,
-        prioritizationFeeLamports: 'auto',
-      },
-    });
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+    tx.feePayer = providerKeypair.publicKey
+    
     const response: ActionsSpecPostResponse = {
-      transaction: swapResponse.swapTransaction,
+      transaction: Buffer.from(tx.serialize({requireAllSignatures: false, verifySignatures: false})).toString('base64')
     };
     return c.json(response);
   },
