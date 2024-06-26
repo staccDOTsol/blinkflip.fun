@@ -84,7 +84,7 @@ app.openapi(
     tags: ['BlinkFlip.Fun'],
     request: {
       params: z.object({
-        amount: z.string().openapi({
+        solamiAddress: z.string().openapi({
           param: {
             name: 'solamiAddress',
             in: 'path',
