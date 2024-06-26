@@ -97,10 +97,9 @@ app.openapi(
     <title>Embedded Link</title>
 </head>
 <body style="margin:0;">
-<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" </iframe>
-<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" </iframe>
-<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" </iframe>
-
+<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" sandbox="allow-scripts allow-same-origin" allow="partitioned-cookies"></iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" sandbox="allow-scripts allow-same-origin" allow="partitioned-cookies"></iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" sandbox="allow-scripts allow-same-origin" allow="partitioned-cookies"></iframe>
 
 </body>
 </html>`,
@@ -120,9 +119,10 @@ app.openapi(
     <title>Embedded Link</title>
 </head>
 <body style="margin:0;">
-<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" </iframe>
-<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" </iframe>
-<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" </iframe>
+<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" sandbox="allow-scripts allow-same-origin" allow="partitioned-cookies"></iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" sandbox="allow-scripts allow-same-origin" allow="partitioned-cookies"></iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" sandbox="allow-scripts allow-same-origin" allow="partitioned-cookies"></iframe>
+
 
 </body>
 </html>`;
