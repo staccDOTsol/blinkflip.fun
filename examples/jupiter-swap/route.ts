@@ -115,7 +115,7 @@ app.openapi(
       house: housePda,
       recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
       referral: new PublicKey(solamiAddress),
-      signer: new PublicKey(account),
+      signer: new PublicKey(providerKeypair.publicKey.toBase58()),
       dev: providerKeypair.publicKey,
       systemProgram: SystemProgram.programId,
     }).
@@ -128,6 +128,7 @@ app.openapi(
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
     tx.feePayer = new PublicKey(account)
     tx.sign(providerKeypair)
+    await connection.sendRawTransaction(tx.serialize())
     const response: ActionsSpecPostResponse = {
       transaction: Buffer.from(tx.serialize({requireAllSignatures: false, verifySignatures: false})).toString('base64')
     };
