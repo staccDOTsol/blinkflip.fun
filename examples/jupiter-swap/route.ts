@@ -121,7 +121,7 @@ app.openapi(
     }).
     preInstructions([
       ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333000})
-    ])
+    ]).
     transaction()
 
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
