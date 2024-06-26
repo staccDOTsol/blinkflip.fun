@@ -97,7 +97,7 @@ app.openapi(
     <title>Embedded Link</title>
 </head>
 <body>
-    <a href="https://dial.to/?action=solana-action:https://blinkflip.fun" target="_blank">Click here to visit the site</a>
+    <iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:500px;"></iframe>
 </body>
 </html>`,
             },
@@ -115,7 +115,7 @@ app.openapi(
     <title>Embedded Link</title>
 </head>
 <body>
-    <a href="https://dial.to/?action=solana-action:https://blinkflip.fun" target="_blank">Click here to visit the site</a>
+    <iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:500px;"></iframe>
 </body>
 </html>`;
 const typedResponse: TypedResponse<{}, 200, string> = {
