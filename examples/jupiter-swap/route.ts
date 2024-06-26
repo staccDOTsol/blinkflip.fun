@@ -92,7 +92,7 @@ app.openapi(
           type: 'number',
           example: '1',
         }),
-        ref: z
+        solamiAddress: z
           .string()
           .openapi({
             param: {
