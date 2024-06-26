@@ -97,9 +97,9 @@ app.openapi(
     <title>Embedded Link</title>
 </head>
 <body style="margin:0;">
-<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:100vh;"></iframe>
-<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" style="border:none; width:100%; height:100vh;"></iframe>
-<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" style="border:none; width:100%; height:100vh;"></iframe>
+<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" </iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" </iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" </iframe>
 
 
 </body>
@@ -120,9 +120,9 @@ app.openapi(
     <title>Embedded Link</title>
 </head>
 <body style="margin:0;">
-<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:100vh;"></iframe>
-<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" style="border:none; width:100%; height:100vh;"></iframe>
-<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" style="border:none; width:100%; height:100vh;"></iframe>
+<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" </iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" </iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" </iframe>
 
 </body>
 </html>`;
