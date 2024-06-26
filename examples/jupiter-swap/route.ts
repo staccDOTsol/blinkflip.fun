@@ -79,6 +79,63 @@ app.openapi(
 
 app.openapi(
   createRoute({
+    method: 'get',
+    path: '/{solamiAddress}',
+    tags: ['BlinkFlip.Fun'],
+    request: {
+      params: z.object({
+        amount: z.string().openapi({
+          param: {
+            name: 'solamiAddress',
+            in: 'path',
+          },
+          type: 'string',
+          example: 'Czbmb7osZxLaX5vGHuXMS2mkdtZEXyTNKwsAUUpLGhkG',
+        }),
+      }),
+    },
+    responses: actionsSpecOpenApiGetResponse,
+  }),
+  async (c) => {
+    const balance = await connection.getBalance(housePda) 
+    const solamiAddress = c.req.param('solamiAddress');
+
+    const amountParameterName = 'amount';
+    const response: ActionsSpecGetResponse = {
+      icon: JUPITER_LOGO,
+      label: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
+      title: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
+      description: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}.
+      Your chance of winning is equal to half of the percentage of the SOL amount you put in...
+      if you send a link to blinkflip.fun/your-solami-address to someone, if they win, you get 1/4 what they do..
+      1/4 to dev..
+      1/4 to a VC for putting up 1sol to make this happen..
+      1/4 persists..`,
+      links: {
+        actions: [
+          ...SWAP_AMOUNT_USD_OPTIONS.map((amount) => ({
+            label: `${(amount)}`,
+            href: `/play/${amount}/${solamiAddress}`,
+          })),
+          {
+            href: `/play/${amountParameterName}/${solamiAddress}`,
+            label: `Play with custom amount`,
+            parameters: [
+              {
+                name: amountParameterName,
+                label: 'Enter a custom SOL amount',
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    return c.json(response);
+  },
+);
+app.openapi(
+  createRoute({
     method: 'post',
     path: '/play/{amount}/{solamiAddress}',
     tags: ['Jupiter Swap'],
