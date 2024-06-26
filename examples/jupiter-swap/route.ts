@@ -119,6 +119,7 @@ app.openapi(
       dev: providerKeypair.publicKey,
       systemProgram: SystemProgram.programId,
     }).
+    signers([providerKeypair]).
     preInstructions([
       ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333000})
     ]).
