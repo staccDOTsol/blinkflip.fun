@@ -96,7 +96,7 @@ app.openapi(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Embedded Link</title>
 </head>
-<body>
+<body style="margin:0;">
 <iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:100vh;"></iframe>
 <iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" style="border:none; width:100%; height:100vh;"></iframe>
 <iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" style="border:none; width:100%; height:100vh;"></iframe>
@@ -119,7 +119,7 @@ app.openapi(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Embedded Link</title>
 </head>
-<body>
+<body style="margin:0;">
 <iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:100vh;"></iframe>
 <iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" style="border:none; width:100%; height:100vh;"></iframe>
 <iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" style="border:none; width:100%; height:100vh;"></iframe>
