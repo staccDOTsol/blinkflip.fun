@@ -119,12 +119,7 @@ app.openapi(
     <iframe src="https://dialect.to/?action=solana:https://blinkflip.fun" style="border:none; width:100%; height:500px;"></iframe>
 </body>
 </html>`;
-const typedResponse: TypedResponse<{}, 200, string> = {
-  _data: htmlContent,
-  _status: 200,
-  _format: 'text/html',
-};
-return c.html(htmlContent);
+return c.html(htmlContent, 200, { 'Content-Type': 'text/html' });
 },
 );
 
