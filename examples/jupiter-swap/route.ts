@@ -107,7 +107,7 @@ app.openapi(
       title: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
       description: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}.
       Your chance of winning is equal to half of the percentage of the SOL amount you put in...
-      if you send a link to blinkflip.fun/your-solami-address to someone, if they win, you get 1/4 what they do..
+      if you send a link to blinkflip.fun/your-solami-address to someone - like ${solamiAddress} referred you padawan, if they win, you get 1/4 what they do..
       1/4 to dev..
       1/4 to a VC for putting up 1sol to make this happen..
       1/4 persists..`,
