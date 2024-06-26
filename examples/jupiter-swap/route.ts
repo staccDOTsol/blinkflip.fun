@@ -106,6 +106,7 @@ app.openapi(
       },
     },
   }),
+  // @ts-ignore
   async (c) => {
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">
@@ -123,7 +124,7 @@ const typedResponse: TypedResponse<{}, 200, string> = {
   _status: 200,
   _format: 'text/html',
 };
-return c.json(typedResponse);
+return c.html(htmlContent);
 },
 );
 
