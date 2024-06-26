@@ -97,7 +97,11 @@ app.openapi(
     <title>Embedded Link</title>
 </head>
 <body>
-<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:1200px;"></iframe>
+<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:100vh;"></iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" style="border:none; width:100%; height:100vh;"></iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" style="border:none; width:100%; height:100vh;"></iframe>
+
+
 </body>
 </html>`,
             },
@@ -116,7 +120,10 @@ app.openapi(
     <title>Embedded Link</title>
 </head>
 <body>
-<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:1200px;"></iframe>
+<iframe src="https://dial.to/?action=solana-action:https://blinkflip.fun" style="border:none; width:100%; height:100vh;"></iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://fomo3d.fun" style="border:none; width:100%; height:100vh;"></iframe>
+<iframe src="https://actions.dialect.to/?action=solana-action:https://pumpwithfriens.fun/" style="border:none; width:100%; height:100vh;"></iframe>
+
 </body>
 </html>`;
 return c.html(htmlContent, 200, { 'Content-Type': 'text/html' });
