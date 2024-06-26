@@ -15,6 +15,7 @@ import * as idl from '../../chancy.json'
 import { Keypair, Connection, PublicKey, SystemProgram, ComputeBudgetProgram} from '@solana/web3.js';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { Program, BN, Idl, AnchorProvider, Wallet } from '@coral-xyz/anchor';
+import { TypedResponse } from 'hono';
 
 export const JUPITER_LOGO =
   'https://i.imgur.com/P2kV5M8.png';
@@ -76,6 +77,56 @@ app.openapi(
     return c.json(response);
   },
 );
+app.openapi(
+  createRoute({
+    method: 'get',
+    path: '/embed',
+    tags: ['Embed'],
+    responses: {
+      200: {
+        description: 'HTML content',
+        content: {
+          'text/html': {
+            schema: {
+              type: 'string',
+              example: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedded Link</title>
+</head>
+<body>
+    <a href="https://dial.to/?action=solana-action:https://blinkflip.fun" target="_blank">Click here to visit the site</a>
+</body>
+</html>`,
+            },
+          },
+        },
+      },
+    },
+  }),
+  async (c) => {
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedded Link</title>
+</head>
+<body>
+    <a href="https://dial.to/?action=solana-action:https://blinkflip.fun" target="_blank">Click here to visit the site</a>
+</body>
+</html>`;
+const typedResponse: TypedResponse<{}, 200, string> = {
+  _data: htmlContent,
+  _status: 200,
+  _format: 'text/html',
+};
+return c.json(typedResponse);
+},
+);
+
 
 app.openapi(
   createRoute({
