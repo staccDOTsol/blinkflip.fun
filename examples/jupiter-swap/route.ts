@@ -17,7 +17,7 @@ import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { Program, BN, Idl, AnchorProvider, Wallet } from '@coral-xyz/anchor';
 
 export const JUPITER_LOGO =
-  'blob:https://imgur.com/9385c59d-80d9-4f03-891b-3e048140fa8c/';
+  'https://i.imgur.com/P2kV5M8.png';
 const providerKeypair = Keypair.fromSecretKey(
   bs58.decode(process.env.KEY as string),
 );
