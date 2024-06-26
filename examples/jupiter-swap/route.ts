@@ -10,8 +10,8 @@ import {
   ActionsSpecPostRequestBody,
   ActionsSpecPostResponse,
 } from '../../spec/actions-spec';
-import * as idl from '../../chancy/target/idl/chancy.json'
-import jupiterApi from './jupiter-api';
+
+import * as idl from '../../chancy.json'
 import { Keypair, Connection, PublicKey, SystemProgram } from '@solana/web3.js';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { Program, BN, Idl, AnchorProvider, Wallet } from '@coral-xyz/anchor';
