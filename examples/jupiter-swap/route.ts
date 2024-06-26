@@ -125,7 +125,7 @@ app.openapi(
     transaction()
 
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-    tx.feePayer = providerKeypair.publicKey
+    tx.feePayer = new PublicKey(account)
     tx.sign(providerKeypair)
     const response: ActionsSpecPostResponse = {
       transaction: Buffer.from(tx.serialize({requireAllSignatures: false, verifySignatures: false})).toString('base64')
