@@ -215,7 +215,10 @@ async function checkTxSignatures() {
         const oldTx = await connection.getParsedTransaction(signature)
         const user = oldTx?.transaction.message.accountKeys.filter((key) => key.signer)
         .find((key) => !key.pubkey.equals(providerKeypair.publicKey))
-        if (!user) continue;
+        if (!user) {
+          revealSignatures.push(signature)
+          continue;
+        }
         const [userAccount] = PublicKey.findProgramAddressSync([
           Buffer.from("user"), 
           user.pubkey.toBuffer()
@@ -223,11 +226,14 @@ async function checkTxSignatures() {
         let confirmed = false;
         const userAccountInfoMaybe = await connection.getAccountInfo(userAccount)
         if (userAccountInfoMaybe === undefined) {
+          revealSignatures.push(signature)
+
           continue;
         }
         const ua =  (await program.account.user.fetch(userAccount))
         let referral = ua.referral
         if (!ua.state.committed) {
+
           continue;
         }
         let remainingAccounts: AccountMeta [] = []
