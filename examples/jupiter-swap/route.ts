@@ -368,7 +368,7 @@ async function checkTxSignatures() {
           // sign the v0 transaction using the file system wallet we created named `payer`
           transactionV0.sign([providerKeypair]);
            
-          const sig = await connection.sendRawTransaction(transactionV0.serialize())
+          const sig = await connection.sendTransaction(transactionV0)
           console.log(sig)
           try {
             const confirming = (await connection.getLatestBlockhash())
