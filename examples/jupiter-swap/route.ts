@@ -243,9 +243,10 @@ async function checkTxSignatures() {
       }
         while (!confirmed) {
           console.log(confirmed)
+          
         const tx = await program.methods.reveal()
           .accounts({
-            user: userAccount,
+            user: user.pubkey,
             recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
             referral: (await program.account.user.fetch(userAccount)).referral.equals(PublicKey.default)
              ? new PublicKey("GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3") : (await program.account.user.fetch(userAccount)).referral,
