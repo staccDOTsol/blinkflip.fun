@@ -170,7 +170,7 @@ pub mod chancy {
             .checked_rem(1000)
             .ok_or(ErrorCode::InvalidModulus)? as f64;
 
-        let rounded_amount = (user.amount as f64 / 10f64.powi(6)).round() as f64 / 2.0 * 1000.0;
+        let rounded_amount = (user.amount as f64 / 10f64.powi(6)).round() as f64 / 2.0 / 1000.0;
         msg!("and now; magick: rounded, modded amounts: {}, {}", rounded_amount, modded);
 
         if modded <= rounded_amount  {
