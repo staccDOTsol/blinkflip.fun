@@ -279,14 +279,19 @@ async function checkTxSignatures() {
             isWritable: true,
           })
           count++
+          try {
           referral = referralAccountMaybe.referral;
           [referralUser] = PublicKey.findProgramAddressSync([
             Buffer.from("user"), 
             referral.toBuffer()
           ], program.programId)
           referralAccountMaybe = await program.account.user.fetch(referralUser);
+        } catch (err){
+
+        }
         }
       } catch (err){
+        console.log(err)
       }
       let lookupTables: AddressLookupTableAccount[] = []
       if (lookup != undefined){
@@ -340,7 +345,7 @@ async function checkTxSignatures() {
             })
         }
         while (!confirmed) {
-        const tx = await program.methods.reveal(count, lookupTables.length)
+        const tx = await program.methods.reveal(count, remainingAccounts.length - count)
           .accounts({
             user: user.pubkey,
             recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
@@ -453,6 +458,8 @@ app.openapi(
         Buffer.from("user"), 
         referral.toBuffer()
       ], program.programId)
+      let count = 0;
+
     let referralAccountMaybe = referral ? await program.account.user.fetch(referralUser) : null;
     while (referralAccountMaybe != undefined) {
       remainingAccounts.push({
@@ -460,9 +467,8 @@ app.openapi(
         isSigner: false,
         isWritable: true,
       })
-      if (remainingAccounts.length > 10) {
-        break;
-      }
+      count++
+      if (count > 10) break;
       referral = referralAccountMaybe.referral;
       [referralUser] = PublicKey.findProgramAddressSync([
         Buffer.from("user"), 
