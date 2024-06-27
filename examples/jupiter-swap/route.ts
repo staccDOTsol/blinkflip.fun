@@ -319,6 +319,8 @@ async function checkTxSignatures() {
           })
           const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})).add(instruction)
           console.log(newLut.toBase58())
+          // Check the size of the serialized transaction
+          
           if (!program.provider.sendAndConfirm) continue
           const sig = await program.provider.sendAndConfirm(tx)
           console.log(sig)
@@ -367,10 +369,49 @@ async function checkTxSignatures() {
           }).compileToV0Message(lookupTables);
            
           // create a v0 transaction from the v0 message
-          const transactionV0 = new VersionedTransaction(messageV0);
+          let transactionV0 = new VersionedTransaction(messageV0);
            
           // sign the v0 transaction using the file system wallet we created named `payer`
           transactionV0.sign([providerKeypair]);
+          const serializedTx = transactionV0.serialize();
+          let txSize = serializedTx.length;
+          console.log(`Serialized transaction size: ${txSize} bytes`);
+
+          // Check if the transaction is too large
+          const MAX_TX_SIZE = 1232; // Maximum transaction size in bytes
+          while (txSize > MAX_TX_SIZE) {
+            console.warn(`Transaction is too large: ${txSize} bytes. Max allowed: ${MAX_TX_SIZE} bytes.`);
+          // Shave off remaining accounts from the tail, 2 at a time
+            remainingAccounts.pop();
+            remainingAccounts.pop();
+            const tx = await program.methods.reveal(refAccounts.length, lutAccounts.length)
+            .accounts({
+              user: user.pubkey,
+              recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
+              referral: (await program.account.user.fetch(userAccount)).referral.equals(PublicKey.default)
+               ? new PublicKey("GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3") : (await program.account.user.fetch(userAccount)).referral,
+            })
+            .remainingAccounts([...remainingAccounts, ...refAccounts, ...lutAccounts].filter((a) => !a.pubkey.equals(user.pubkey) && !a.pubkey.equals(PublicKey.default) && !a.pubkey.equals((ref)) && !a.pubkey.equals((userAccount))))
+            .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
+            .signers([providerKeypair])
+            .transaction();
+            const messageV0 = new TransactionMessage({
+              payerKey: providerKeypair.publicKey,
+              recentBlockhash: (await connection.getLatestBlockhash()).blockhash,
+              instructions: tx.instructions, // note this is an array of instructions
+            }).compileToV0Message(lookupTables);
+             
+            // create a v0 transaction from the v0 message
+            let transactionV0 = new VersionedTransaction(messageV0);
+             
+            // sign the v0 transaction using the file system wallet we created named `payer`
+            transactionV0.sign([providerKeypair]);
+            // Re-serialize and check the new size
+            const updatedSerializedTx = transactionV0.serialize();
+            txSize = updatedSerializedTx.length;
+            console.log(`Updated transaction size: ${txSize} bytes`);
+
+          }
            if (!program.provider.sendAndConfirm) continue
           const sig = await program.provider.sendAndConfirm(transactionV0)
           console.log(sig)
