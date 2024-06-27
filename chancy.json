@@ -231,9 +231,6 @@
           },
           {
             "name": "Committed"
-          },
-          {
-            "name": "Revealed"
           }
         ]
       }
@@ -242,7 +239,18 @@
       "name": "House",
       "type": {
         "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "User",
+      "type": {
+        "kind": "struct",
         "fields": [
+          {
+            "name": "referral",
+            "type": "pubkey"
+          },
           {
             "name": "user",
             "type": "pubkey"
@@ -262,18 +270,6 @@
                 "name": "GameState"
               }
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "User",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "referral",
-            "type": "pubkey"
           }
         ]
       }

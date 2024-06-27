@@ -198,7 +198,6 @@ const txSignaturesFile = 'tx_signatures.json';
 if (!fs.existsSync(txSignaturesFile)) {
   fs.writeFileSync(txSignaturesFile, JSON.stringify([], null, 2));
 }
-const devKeypair = Keypair.fromSecretKey(bs58.decode(process.env.DEV_KEY as string));
 const houseAddress = housePda;
 
 // Function to write tx signature to local file
@@ -254,7 +253,7 @@ async function checkTxSignatures() {
           })
           .remainingAccounts(remainingAccounts)
           .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
-          .signers([devKeypair])
+          .signers([providerKeypair])
           .rpc();
            try {
             const confirming = (await connection.getLatestBlockhash())

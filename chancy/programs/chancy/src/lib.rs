@@ -11,14 +11,13 @@ pub mod chancy {
 
     use super::*;
     pub fn commit(ctx: Context<Commit>, amount: u64) -> Result<()> {
+        let user = &mut ctx.accounts.user_account;
+        user.amount = amount;
+        user.commit_slot = Clock::get()?.slot;
+        assert_eq!(user.state, GameState::Ready, "User state is not ready");
+        user.state = GameState::Committed;
+        user.referral = ctx.accounts.referral.key();
         let house = &mut ctx.accounts.house;
-        house.user = ctx.accounts.user.key();
-        house.amount = amount;
-        house.commit_slot = Clock::get()?.slot;
-        house.state = GameState::Committed;
-        let user_account = &mut ctx.accounts.user_account;
-        user_account.referral = ctx.accounts.referral.key();
-
         // Transfer the bet amount from user to house account
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
@@ -32,11 +31,11 @@ pub mod chancy {
         Ok(())
     }
     pub fn reveal(ctx: Context<Reveal>) -> Result<()> {
+        let user = &mut ctx.accounts.user_account;
         let house = &mut ctx.accounts.house;
-
         // Verify the reveal is within the valid time window
         let current_slot = Clock::get()?.slot;
-        require!(current_slot - house.commit_slot <= 100, ErrorCode::RevealTooLate);
+        require!(current_slot - user.commit_slot <= 100, ErrorCode::RevealTooLate);
 
 
         let recent_slothashes = &ctx.accounts.recent_blockhashes;
@@ -66,7 +65,7 @@ pub mod chancy {
             .checked_rem(100)
             .ok_or(ErrorCode::InvalidModulus)? as f64;
 
-        let rounded_amount = (house.amount as f64 / 10f64.powi(9)).round() as f64 / 2.0;
+        let rounded_amount = (user.amount as f64 / 10f64.powi(9)).round() as f64 / 2.0;
         msg!("and now; magick: rounded, modded amounts: {}, {}", rounded_amount, modded);
 
         if modded <= rounded_amount  {
@@ -108,7 +107,7 @@ pub mod chancy {
             // Funds already in house account, no transfer needed
         }
 
-        house.state = GameState::Revealed;
+        user.state = GameState::Ready;
         Ok(())
     }
 }
@@ -121,7 +120,6 @@ pub struct Commit<'info> {
         mut,
         seeds = [b"house".as_ref(), dev.key().as_ref()],
         bump,
-        constraint = house.state == GameState::Ready @ ErrorCode::HouseNotReady
     )]
     pub house: Account<'info, House>,
     #[account(mut)]
@@ -142,11 +140,10 @@ pub struct Reveal<'info> {
         mut,
         seeds = [b"house".as_ref(), dev.key().as_ref()],
         bump,
-        constraint = house.state == GameState::Committed @ ErrorCode::InvalidState
     )]
     pub house: Account<'info, House>,
     /// CHECK: This is the user account, not a signer
-    #[account(mut, address = house.user @ ErrorCode::InvalidUser)]
+    #[account(mut, address = user_account.user @ ErrorCode::InvalidUser)]
     pub user: AccountInfo<'info>,
     /// CHECK: This is safe as we only read from it
     pub recent_blockhashes: UncheckedAccount<'info>,
@@ -156,17 +153,13 @@ pub struct Reveal<'info> {
     /// CHECK:
     pub referral: AccountInfo<'info>,
     
-    #[account(mut, seeds = [b"user".as_ref(), user.key().as_ref()], bump)]
+    #[account(mut, seeds = [b"user".as_ref(), user.key().as_ref()], bump, constraint = user_account.state == GameState::Committed @ ErrorCode::InvalidState)]
     pub user_account: Account<'info, User>,
 }
 
 
 #[account]
 pub struct House {
-    pub user: Pubkey,
-    pub amount: u64,
-    pub commit_slot: u64,
-    pub state: GameState,
 }
 
 
@@ -174,13 +167,18 @@ pub struct House {
 #[account]
 pub struct User {
     pub referral: Pubkey,
+
+    pub user: Pubkey,
+    pub amount: u64,
+    pub commit_slot: u64,
+    pub state: GameState,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum GameState {
+    #[default]
     Ready,
     Committed,
-    Revealed,
 }
 
 #[error_code]

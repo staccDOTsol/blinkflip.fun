@@ -237,9 +237,6 @@ export type Chancy = {
           },
           {
             "name": "committed"
-          },
-          {
-            "name": "revealed"
           }
         ]
       }
@@ -248,7 +245,18 @@ export type Chancy = {
       "name": "house",
       "type": {
         "kind": "struct",
+        "fields": []
+      }
+    },
+    {
+      "name": "user",
+      "type": {
+        "kind": "struct",
         "fields": [
+          {
+            "name": "referral",
+            "type": "pubkey"
+          },
           {
             "name": "user",
             "type": "pubkey"
@@ -268,18 +276,6 @@ export type Chancy = {
                 "name": "gameState"
               }
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "user",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "referral",
-            "type": "pubkey"
           }
         ]
       }
