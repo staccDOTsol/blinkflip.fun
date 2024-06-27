@@ -240,7 +240,6 @@ async function checkTxSignatures() {
           referralAccountMaybe = await program.account.user.fetch(referral);
         }
       } catch (err){
-        console.log(err)
       }
         while (!confirmed) {
           console.log(confirmed)
