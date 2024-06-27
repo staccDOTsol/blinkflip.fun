@@ -226,7 +226,11 @@ async function checkTxSignatures() {
         if (userAccountInfoMaybe === undefined) {
           continue;
         }
-        let referral = (await program.account.user.fetch(userAccount)).referral
+        const ua =  (await program.account.user.fetch(userAccount))
+        let referral = ua.referral
+        if (!ua.state.committed) {
+          continue;
+        }
         let remainingAccounts: AccountMeta [] = []
 
         try {
