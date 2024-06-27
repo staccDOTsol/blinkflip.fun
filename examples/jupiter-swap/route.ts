@@ -255,7 +255,9 @@ async function checkTxSignatures() {
               blockhash: confirming.blockhash,
               lastValidBlockHeight: confirming.lastValidBlockHeight,
             })
+            console.log(result.value)
             confirmed = result.value.err == null
+            console.log(confirmed)
           } catch (error) {
             console.error('Reveal transaction failed:', error);
           }
