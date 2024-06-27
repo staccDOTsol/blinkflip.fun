@@ -1,4 +1,10 @@
-{
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/chancy.json`.
+ */
+export type Chancy = {
   "address": "76NigLJb5MPHMz4UyYHeAKR1v4Ck1SFrAkBjVKmbYJpA",
   "metadata": {
     "name": "chancy",
@@ -48,7 +54,7 @@
           "signer": true
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         },
         {
@@ -61,7 +67,7 @@
           "name": "referral"
         },
         {
-          "name": "user_account",
+          "name": "userAccount",
           "writable": true,
           "pda": {
             "seeds": [
@@ -129,7 +135,7 @@
           "writable": true
         },
         {
-          "name": "recent_blockhashes"
+          "name": "recentBlockhashes"
         },
         {
           "name": "dev",
@@ -142,7 +148,7 @@
           "writable": true
         },
         {
-          "name": "user_account",
+          "name": "userAccount",
           "writable": true,
           "pda": {
             "seeds": [
@@ -168,7 +174,7 @@
   ],
   "accounts": [
     {
-      "name": "House",
+      "name": "house",
       "discriminator": [
         21,
         145,
@@ -181,7 +187,7 @@
       ]
     },
     {
-      "name": "User",
+      "name": "user",
       "discriminator": [
         159,
         117,
@@ -197,49 +203,49 @@
   "errors": [
     {
       "code": 6000,
-      "name": "RevealTooLate"
+      "name": "revealTooLate"
     },
     {
       "code": 6001,
-      "name": "InvalidState"
+      "name": "invalidState"
     },
     {
       "code": 6002,
-      "name": "HouseNotReady"
+      "name": "houseNotReady"
     },
     {
       "code": 6003,
-      "name": "InvalidUser"
+      "name": "invalidUser"
     },
     {
       "code": 6004,
-      "name": "InvalidModulus"
+      "name": "invalidModulus"
     },
     {
       "code": 6005,
-      "name": "InvalidBlockhashes"
+      "name": "invalidBlockhashes"
     }
   ],
   "types": [
     {
-      "name": "GameState",
+      "name": "gameState",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Ready"
+            "name": "ready"
           },
           {
-            "name": "Committed"
+            "name": "committed"
           },
           {
-            "name": "Revealed"
+            "name": "revealed"
           }
         ]
       }
     },
     {
-      "name": "House",
+      "name": "house",
       "type": {
         "kind": "struct",
         "fields": [
@@ -252,14 +258,14 @@
             "type": "u64"
           },
           {
-            "name": "commit_slot",
+            "name": "commitSlot",
             "type": "u64"
           },
           {
             "name": "state",
             "type": {
               "defined": {
-                "name": "GameState"
+                "name": "gameState"
               }
             }
           }
@@ -267,7 +273,7 @@
       }
     },
     {
-      "name": "User",
+      "name": "user",
       "type": {
         "kind": "struct",
         "fields": [
@@ -279,4 +285,4 @@
       }
     }
   ]
-}
+};

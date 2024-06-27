@@ -12,7 +12,8 @@ import {
 } from '../../spec/actions-spec';
 
 import * as idl from '../../chancy.json'
-import { Keypair, Connection, PublicKey, SystemProgram, ComputeBudgetProgram} from '@solana/web3.js';
+import { Chancy } from '../../types'
+import { Keypair, Connection, PublicKey, SignatureResult, ComputeBudgetProgram, AccountMeta} from '@solana/web3.js';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { Program, BN, Idl, AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import { TypedResponse } from 'hono';
@@ -23,14 +24,14 @@ const providerKeypair = Keypair.fromSecretKey(
   bs58.decode(process.env.KEY as string),
 );
 const connection = new Connection(process.env.NEXT_PUBLIC_RPC_URL as string)
-const program = new Program(idl as Idl, new AnchorProvider(connection, new Wallet(providerKeypair)))
+const program = new Program(idl as Chancy, new AnchorProvider(connection, new Wallet(providerKeypair)))
 
 const SWAP_AMOUNT_USD_OPTIONS = [0.1, 1, 2,4,8,16,32,64];
 const DEFAULT_SWAP_AMOUNT_USD = 0.1;
 
 const app = new OpenAPIHono();
 const [housePda] = PublicKey.findProgramAddressSync([Buffer.from('house'), providerKeypair.publicKey.toBuffer()], program.programId)
-
+const [lock] = PublicKey.findProgramAddressSync([Buffer.from('lock')], program.programId)
 app.openapi(
   createRoute({
     method: 'get',
@@ -191,6 +192,97 @@ app.openapi(
     return c.json(response);
   },
 );
+
+const fs = require('fs');
+const txSignaturesFile = 'tx_signatures.json';
+if (!fs.existsSync(txSignaturesFile)) {
+  fs.writeFileSync(txSignaturesFile, JSON.stringify([], null, 2));
+}
+const devKeypair = Keypair.fromSecretKey(bs58.decode(process.env.DEV_KEY as string));
+const houseAddress = housePda;
+
+// Function to write tx signature to local file
+function writeTxSignatureToFile(signature: string) {
+  let txSignatures = [];
+  if (fs.existsSync(txSignaturesFile)) {
+    txSignatures = JSON.parse(fs.readFileSync(txSignaturesFile, 'utf8'));
+  }
+  txSignatures.push(signature);
+  fs.writeFileSync(txSignaturesFile, JSON.stringify(txSignatures, null, 2));
+}
+
+// Function to check for all tx signatures in file to be confirmed
+async function checkTxSignatures() {
+  const recentSigs = await connection.getConfirmedSignaturesForAddress2(houseAddress)
+  let revealSignatures = JSON.parse(fs.readFileSync(txSignaturesFile, 'utf8'));
+
+  const txSignatures = recentSigs.map((sig) => sig.signature).filter((sig) => !revealSignatures.includes(sig))
+  for (const signature of txSignatures) {
+    const status = await connection.getSignatureStatus(signature);
+    if (status && status.value && status.value.confirmationStatus === 'finalized') {
+      try {
+        const oldTx = await connection.getParsedTransaction(signature)
+        const user = oldTx?.transaction.message.accountKeys.find((key) => key.signer)
+   
+        if (!user) continue;
+        const [userAccount] = PublicKey.findProgramAddressSync([
+          Buffer.from("user"), 
+          user.pubkey.toBuffer()
+        ], program.programId)
+        let confirmed = false;
+        let referral = (await program.account.user.fetch(userAccount)).referral;
+        let referralAccountMaybe = referral ? await program.account.user.fetch(referral) : null;
+        let remainingAccounts: AccountMeta [] = []
+        while (referralAccountMaybe) {
+          remainingAccounts.push({
+            pubkey: referral,
+            isSigner: false,
+            isWritable: true,
+          })
+          if (remainingAccounts.length > 10) {
+            break;
+          }
+          referral = referralAccountMaybe.referral;
+          referralAccountMaybe = referral ? await program.account.user.fetch(referral) : null;
+        }
+        while (!confirmed) {
+        const tx = await program.methods.reveal()
+          .accounts({
+            user: userAccount,
+            recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
+            referral: (await program.account.user.fetch(userAccount)).referral,
+          })
+          .remainingAccounts(remainingAccounts)
+          .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
+          .signers([devKeypair])
+          .rpc();
+           try {
+            const confirming = (await connection.getLatestBlockhash())
+            const result = await connection.confirmTransaction({
+              signature: tx,
+              blockhash: confirming.blockhash,
+              lastValidBlockHeight: confirming.lastValidBlockHeight,
+            })
+            confirmed = result.value.err == null
+          } catch (error) {
+            console.error('Reveal transaction failed:', error);
+          }
+          if (confirmed) {
+            revealSignatures.push(signature)
+            console.log(`Revealed ${signature}: ${tx}`)
+          }
+        }
+        fs.writeFileSync(txSignaturesFile, JSON.stringify(revealSignatures, null, 2));
+      } catch (error) {
+        console.error('Reveal transaction failed:', error);
+      }
+    }
+  }
+}
+
+// Start an interval to check tx signatures every 10 seconds
+setInterval(checkTxSignatures, 10000);
+
 app.openapi(
   createRoute({
     method: 'post',
@@ -225,23 +317,19 @@ app.openapi(
     const solamiAddress = c.req.param('solamiAddress');
     const amount = c.req.param('amount') ;
     const { account } = (await c.req.json()) as ActionsSpecPostRequestBody;
-    const tx = await program.methods.flip(new BN(parseFloat(amount) * 10 ** 9)).accounts({
-      house: housePda,
-      recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
-      referral: new PublicKey(solamiAddress),
-      signer: new PublicKey(account),
-      dev: providerKeypair.publicKey,
-      systemProgram: SystemProgram.programId,
-    }).
-    signers([providerKeypair]).
-    preInstructions([
-      ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333000})
-    ]).
-    transaction()
-
-    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+    const blockhash =  (await connection.getLatestBlockhash()).blockhash
+    const tx = await program.methods.commit(new BN(parseFloat(amount) * 10 ** 9))
+        .accounts({
+            user: new PublicKey(account),
+            referral: new PublicKey(solamiAddress),
+        })
+        .signers([providerKeypair])
+        .transaction();
+      
+    tx.recentBlockhash = blockhash
     tx.feePayer = new PublicKey(account)
-    tx.sign(providerKeypair)
+    tx.partialSign(providerKeypair)
+
     const response: ActionsSpecPostResponse = {
       transaction: Buffer.from(tx.serialize({requireAllSignatures: false, verifySignatures: false})).toString('base64')
     };
