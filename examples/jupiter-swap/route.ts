@@ -279,8 +279,10 @@ async function checkTxSignatures() {
             isWritable: true,
           })
           count++
+          if (count == 10) break;
           try {
           referral = referralAccountMaybe.referral;
+          if (referral.equals(PublicKey.default)) break;
           [referralUser] = PublicKey.findProgramAddressSync([
             Buffer.from("user"), 
             referral.toBuffer()
@@ -466,6 +468,7 @@ app.openapi(
       count++
       if (count > 10) break;
       referral = referralAccountMaybe.referral;
+      if (referral.equals(PublicKey.default)) break;
       [referralUser] = PublicKey.findProgramAddressSync([
         Buffer.from("user"), 
         referral.toBuffer()
