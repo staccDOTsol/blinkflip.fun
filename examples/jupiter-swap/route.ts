@@ -238,6 +238,7 @@ async function checkTxSignatures() {
           referralAccountMaybe = await program.account.user.fetch(referral);
         }
         while (!confirmed) {
+          console.log(confirmed)
         const tx = await program.methods.reveal()
           .accounts({
             user: userAccount,
@@ -248,6 +249,7 @@ async function checkTxSignatures() {
           .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
           .signers([providerKeypair])
           .rpc();
+          console.log(tx)
            try {
             const confirming = (await connection.getLatestBlockhash())
             const result = await connection.confirmTransaction({
