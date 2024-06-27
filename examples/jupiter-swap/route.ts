@@ -323,6 +323,7 @@ app.openapi(
             user: new PublicKey(account),
             referral: new PublicKey(solamiAddress),
         })
+        .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
         .signers([providerKeypair])
         .transaction();
       
