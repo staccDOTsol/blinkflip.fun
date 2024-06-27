@@ -1,5 +1,10 @@
 use anchor_lang::{prelude::*, solana_program::program_memory::sol_memcmp};
-use std::str::FromStr;
+use std::{str::FromStr, vec};
+use anchor_lang::solana_program::address_lookup_table::{
+    instruction:: extend_lookup_table,
+    state::AddressLookupTable,
+};
+
 declare_id!("76NigLJb5MPHMz4UyYHeAKR1v4Ck1SFrAkBjVKmbYJpA");
 
 pub const BLOCK_HASHES: Pubkey = pubkey!("SysvarRecentB1ockHashes11111111111111111111");
@@ -8,16 +13,37 @@ pub const BLOCK_HASHES: Pubkey = pubkey!("SysvarRecentB1ockHashes111111111111111
 pub mod chancy {
 
     use anchor_lang::solana_program::sysvar::SysvarId;
+    use anchor_lang::solana_program::{program::invoke, system_instruction};
 
     use super::*;
     pub fn commit(ctx: Context<Commit>, amount: u64) -> Result<()> {
         let user = &mut ctx.accounts.user_account;
         user.amount = amount;
-        user.commit_slot = Clock::get()?.slot;
+        user.total_amount += amount;
         assert_eq!(user.state, GameState::Ready, "User state is not ready");
+        user.last_play = Clock::get()?.unix_timestamp;
         user.state = GameState::Committed;
+        user.streak += 1;
+        user.user = *ctx.accounts.user.to_account_info().key;
+        let referral_count = ctx.remaining_accounts.len() as u64;
+        let streak_cap = 100 * (1_u64.saturating_sub(referral_count)) / 1_u64; // Adjusted to avoid division by zero
+
+        // Ensure streak_cap is at least user.streak / 0.4
+        let min_streak_cap = (user.streak as f64 / 0.4).ceil() as u64;
+        let streak_cap = streak_cap.max(min_streak_cap);
+
+        if user.streak > streak_cap {
+            msg!("Sorry! You're streaking too high! Back to 0 for you.");
+            user.streak = 0;
+        }
+
+        if user.streak > streak_cap  {
+            msg!("Sorry! You're streaking too high! Bak to 0 for u..");
+            user.streak = 0;
+        }
         user.referral = ctx.accounts.referral.key();
         let house = &mut ctx.accounts.house;
+        house.total_inflow += amount;
         // Transfer the bet amount from user to house account
         let cpi_context = CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
@@ -30,7 +56,89 @@ pub mod chancy {
 
         Ok(())
     }
-    pub fn reveal(ctx: Context<Reveal>) -> Result<()> {
+    pub fn reveal<'info>(ctx: Context<'_, '_, '_, 'info, Reveal<'info>>, ref_count: u8, lut_count: u8) -> Result<()> {
+        let dev = &mut ctx.accounts.dev;
+        let mut ua = &ctx.accounts.user_account.to_account_info();
+        let lookup_table_table = &mut ctx.accounts.lookup_table_table;
+        let lookup = lookup_table_table.to_account_info();
+        let remaining_accounts = ctx.remaining_accounts;
+        let referrals = &remaining_accounts[remaining_accounts.len()-(ref_count)as usize..remaining_accounts.len() - lut_count as usize];
+        let luts = &remaining_accounts[remaining_accounts.len()-(lut_count)as usize..remaining_accounts.len() ];
+        let mut pubkeys_to_add = vec![];
+        let users = &remaining_accounts[0..remaining_accounts.len()-lut_count as usize-ref_count as usize];
+        let named_accounts = vec![
+            ctx.accounts.user_account.key(),
+            ctx.accounts.house.key(),
+            ctx.accounts.recent_blockhashes.key(),
+            ctx.accounts.referral.key(),
+        ];
+        let mut lookup_table_combined_addresses = vec![];
+        for account_info in luts.iter().rev() {
+            let data = account_info.data.borrow_mut();
+            if let Ok(lookup_table) = AddressLookupTable::deserialize(&data) {
+                if !lookup_table_table.lookup_tables.contains(&account_info.to_account_info().key) {
+                    let new_size = lookup.data.borrow().len() + 32;
+
+                    let rent = Rent::get()?;
+                    let new_minimum_balance = rent.minimum_balance(new_size);
+
+                    let lamports_diff = new_minimum_balance.saturating_sub(lookup.lamports());
+                    invoke(
+                        &system_instruction::transfer(dev.to_account_info().key, lookup.key, lamports_diff),
+                        &[
+                            dev.to_account_info().clone(),
+                            lookup.clone(),
+                            ctx.accounts.system_program.to_account_info().clone(),
+                        ],
+                    )?;
+
+                    lookup.realloc(new_size, false)?;
+
+                    lookup_table_table.lookup_tables.push(*account_info.to_account_info().key);
+                    
+                }
+                msg!("Found a valid Address Lookup Table: {:?}", lookup_table);
+                lookup_table_combined_addresses.extend(lookup_table.addresses.iter());
+            } else {
+                msg!("Encountered an account that is not a valid Address Lookup Table, stopping iteration.");
+                break;
+            }
+        }
+        
+
+        for named_account in named_accounts {
+            if !lookup_table_combined_addresses.contains(&named_account) {
+                pubkeys_to_add.push(named_account);
+            }
+        }
+        if let Some(account_info) = luts.last() {
+            let data = account_info.data.borrow_mut();
+            if let Ok(lookup_table) = AddressLookupTable::deserialize(&data) {
+                msg!("Found final valid Address Lookup Table: {:?}", lookup_table);
+                
+        if lookup_table.addresses.len() < 255 - pubkeys_to_add.len() {
+         
+        if !pubkeys_to_add.is_empty() {
+            let extend_instruction = extend_lookup_table(
+                *account_info.to_account_info().key,
+                *dev.to_account_info().key,
+                Some(*dev.to_account_info().key),
+                pubkeys_to_add,
+            );
+            invoke(
+                &extend_instruction,
+                &[
+                    account_info.to_account_info(),
+                    dev.to_account_info().clone(),
+                ],
+            )?;
+        }
+    }
+            } else {
+                msg!("Encountered an account that is not a valid Address Lookup Table, stopping iteration.");
+            }
+        }
+        
         let user = &mut ctx.accounts.user_account;
         let house = &mut ctx.accounts.house;
         // Verify the reveal is within the valid time window
@@ -66,12 +174,38 @@ pub mod chancy {
         msg!("and now; magick: rounded, modded amounts: {}, {}", rounded_amount, modded);
 
         if modded <= rounded_amount  {
+
+            let streak_cap = 100 * (1_u64.saturating_sub(ref_count as u64)) / 1_u64; // Adjusted to avoid division by zero
+
+            // Ensure streak_cap is at least user.streak / 0.4
+            let min_streak_cap = (user.streak as f64 / 0.4).ceil() as u64;
+            let streak_cap = streak_cap.max(min_streak_cap);
+    
+            if user.streak > streak_cap {
+                msg!("Sorry! You're streaking too high! Back to 0 for you.");
+                user.streak = 0;
+            }
+
             let snapshot = house.to_account_info().lamports();
             msg!("Winner winner chickum dinner");
+            let base_winner_percentage = 50_f64;
+            let streak_bonus_percentage = (user.streak as f64 / streak_cap as f64) * base_winner_percentage;
+            let winner_reward = (snapshot.div_ceil(100) as f64 * (base_winner_percentage + streak_bonus_percentage)).round() as u64;
+
+
+
+            house.recent_referrer = user.referral;
+            house.recent_winner = *ctx.accounts.user.to_account_info().key;
+            house.recent_won = winner_reward;
+            house.recent_referrer_won = snapshot.div_ceil(10);
+            house.total_won += winner_reward;
+            house.total_wins += 1;
+            house.recent_referral_chain = ref_count;
+
             transfer_service_fee_lamports(
                 &house.to_account_info(),
                 &ctx.accounts.user.to_account_info(),
-                snapshot.div_ceil(2) 
+                winner_reward
             )?;
             transfer_service_fee_lamports(
                 &house.to_account_info(),
@@ -84,7 +218,7 @@ pub mod chancy {
                 snapshot.div_ceil(10) 
                 )?;
                 let mut prev_referral = ctx.accounts.referral.to_account_info().key;
-                for remaining_account in ctx.remaining_accounts.iter() {
+                for remaining_account in referrals.iter() {
                     let remaining_user = User::try_from_slice(&remaining_account.data.borrow())?;
                     let referral = remaining_user.referral;
                     msg!("Referral: {}", referral);
@@ -99,9 +233,52 @@ pub mod chancy {
                     }
                     prev_referral = referral_account.key;
                 }
+                user.streak = 0;
         } else {
             msg!("No winner, no dinner");
-            // Funds already in house account, no transfer needed
+
+            let mut user = &ua.clone();
+            
+            let mut count = 0;
+        for ai in users.iter(){
+            if count == 0{
+                user = ai;
+            }
+            else {
+                ua = ai;
+            }
+            count+=1;
+            if count == 2 {
+                count = 0;
+                let user_account = User::try_from_slice(&ua.data.borrow())?;           
+// Assuming we're using a fixed-point representation with 9 decimal places (1 LAMPORT = 10^-9 SOL)
+                const DECIMAL_PLACES: u64 = 9;
+                const SCALE: u64 = 10u64.pow(DECIMAL_PLACES as u32);
+
+                let user_info = user.to_account_info();
+                let user_key = user_info.key;
+                let house_lamports = house.total_inflow;
+                let house_total_amount = house.to_account_info().lamports();
+
+                if house_total_amount == 0 {
+                    return Err(ProgramError::AccountBorrowFailed.into());
+                }
+
+                let weighted_lamports = house_lamports
+                    .checked_mul(user_account.total_amount)
+                    .and_then(|product| product.checked_mul(SCALE))
+                    .and_then(|scaled_product| scaled_product.checked_div(house_total_amount))
+                    .and_then(|result| result.checked_div(SCALE))
+                    .ok_or(ProgramError::ArithmeticOverflow)?;
+
+                msg!("Sending weighted lamports to user: {}", user_key);
+                transfer_service_fee_lamports(
+                    &house.to_account_info(),
+                    &user_info,
+                    weighted_lamports
+                )?;
+        }
+        }
         }
 
         user.state = GameState::Ready;
@@ -152,11 +329,27 @@ pub struct Reveal<'info> {
     
     #[account(mut, seeds = [b"user", user.key().as_ref()], bump, constraint = user_account.state == GameState::Committed @ ErrorCode::InvalidState)]
     pub user_account: Account<'info, User>,
+    #[account(init_if_needed, payer=dev, space=8+32+32+32, seeds = [b"lookup_table_table"], bump)]
+    pub lookup_table_table: Account<'info, LookupTableTable>,
+    pub system_program: Program<'info, System>
+
 }
 
+#[account]
+pub struct LookupTableTable {
+    pub lookup_tables: Vec<Pubkey>,
+}
 
 #[account]
 pub struct House {
+    pub recent_winner: Pubkey,
+    pub recent_referrer: Pubkey,
+    pub recent_won: u64,
+    pub recent_referrer_won: u64,
+    pub recent_referral_chain: u8,
+    pub total_wins: u16,
+    pub total_won: u64,
+    pub total_inflow: u64
 }
 
 
@@ -165,10 +358,12 @@ pub struct House {
 pub struct User {
     pub referral: Pubkey,
 
-    pub buf: [u8; 32],
+    pub user: Pubkey,
     pub amount: u64,
-    pub commit_slot: u64,
+    pub streak: u64,
     pub state: GameState,
+    pub last_play: i64,
+    pub total_amount: u64
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]

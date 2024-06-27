@@ -167,9 +167,53 @@ export type Chancy = {
               }
             ]
           }
+        },
+        {
+          "name": "lookupTableTable",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  111,
+                  111,
+                  107,
+                  117,
+                  112,
+                  95,
+                  116,
+                  97,
+                  98,
+                  108,
+                  101,
+                  95,
+                  116,
+                  97,
+                  98,
+                  108,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "refCount",
+          "type": "u8"
+        },
+        {
+          "name": "lutCount",
+          "type": "u8"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -184,6 +228,19 @@ export type Chancy = {
         199,
         210,
         151
+      ]
+    },
+    {
+      "name": "lookupTableTable",
+      "discriminator": [
+        196,
+        217,
+        63,
+        239,
+        92,
+        90,
+        20,
+        219
       ]
     },
     {
@@ -245,7 +302,54 @@ export type Chancy = {
       "name": "house",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "recentWinner",
+            "type": "pubkey"
+          },
+          {
+            "name": "recentReferrer",
+            "type": "pubkey"
+          },
+          {
+            "name": "recentWon",
+            "type": "u64"
+          },
+          {
+            "name": "recentReferrerWon",
+            "type": "u64"
+          },
+          {
+            "name": "recentReferralChain",
+            "type": "u8"
+          },
+          {
+            "name": "totalWins",
+            "type": "u16"
+          },
+          {
+            "name": "totalWon",
+            "type": "u64"
+          },
+          {
+            "name": "totalInflow",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "lookupTableTable",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lookupTables",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
       }
     },
     {
@@ -258,20 +362,15 @@ export type Chancy = {
             "type": "pubkey"
           },
           {
-            "name": "buf",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
+            "name": "user",
+            "type": "pubkey"
           },
           {
             "name": "amount",
             "type": "u64"
           },
           {
-            "name": "commitSlot",
+            "name": "streak",
             "type": "u64"
           },
           {
@@ -281,6 +380,14 @@ export type Chancy = {
                 "name": "gameState"
               }
             }
+          },
+          {
+            "name": "lastPlay",
+            "type": "i64"
+          },
+          {
+            "name": "totalAmount",
+            "type": "u64"
           }
         ]
       }

@@ -13,7 +13,7 @@ import {
 
 import * as idl from '../../chancy.json'
 import { Chancy } from '../../types'
-import { Keypair, Connection, PublicKey, SignatureResult, ComputeBudgetProgram, AccountMeta,  SystemProgram} from '@solana/web3.js';
+import { Keypair, Connection, PublicKey, SignatureResult, ComputeBudgetProgram, AccountMeta,  SystemProgram,AddressLookupTableAccount, AddressLookupTableProgram, Transaction,Message,VersionedTransaction,TransactionMessage} from '@solana/web3.js';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { Program, BN, Idl, AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import { TypedResponse } from 'hono';
@@ -31,6 +31,7 @@ const DEFAULT_SWAP_AMOUNT_USD = 0.1;
 
 const app = new OpenAPIHono();
 const [housePda] = PublicKey.findProgramAddressSync([Buffer.from('house'), providerKeypair.publicKey.toBuffer()], program.programId)
+const [lookupTableTablePda] = PublicKey.findProgramAddressSync([Buffer.from('lookup')], program.programId)
 const [lock] = PublicKey.findProgramAddressSync([Buffer.from('lock')], program.programId)
 app.openapi(
   createRoute({
@@ -49,12 +50,14 @@ app.openapi(
       icon: JUPITER_LOGO,
       label: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
       title: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
-      description: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}.
-      Your chance of winning is equal to half of the percentage of the SOL amount you put in...
-      if you send a link to blinkflip.fun/your-solami-address to someone, if they win, you get 1/4 what they do..
-      1/4 to dev..
-      1/4 to a VC for putting up 1sol to make this happen..
-      1/4 persists..`,
+      description: `Your chance of winning is equal to half of the percentage of the SOL amount you put in...
+      if you send a link to blinkflip.fun/your-solami-address to someone, if they win, you get 10% the pot..
+      10% of the pot goes to dev..
+      and of the 30% remaining, 5% of it goes to the referrer's referrer (if they had 1)
+      and 5% of the 28.5% remaining goes to the next referrer..
+      and 5% of the 27.075% remaining goes to the next referrer..
+      repeating up to 10 times, 
+      so there will always be at minimum 17.96210817% of the pot remaining.`,
       links: {
         actions: [
           ...SWAP_AMOUNT_USD_OPTIONS.map((amount) => ({
@@ -237,22 +240,42 @@ async function checkTxSignatures() {
           continue;
         }
         let remainingAccounts: AccountMeta [] = []
+        let count = 0;
 
+      const allUserAccounts = await program.account.user.all();
+      const sortedUserAccounts = allUserAccounts.sort((a, b) => b.account.lastPlay.toNumber() - a.account.lastPlay.toNumber());
+      console.log(sortedUserAccounts.slice(10))
+      for (const user of sortedUserAccounts) {
+        if (!user.account.user || user.account.user.equals(PublicKey.default)
+        || user.account.streak.toNumber() < 5 || user.account.lastPlay.toNumber() < Date.now() / 1000 - 86400
+        ) continue;
+        remainingAccounts.push({
+          pubkey: user.account.user,
+          isSigner: false,
+          isWritable: true,
+        });
+        remainingAccounts.push({
+          pubkey: user.publicKey,
+          isSigner: false,
+          isWritable: true,
+        });
+      }
+        const lookup  = await program.account.lookupTableTable.fetch(lookupTableTablePda)
         try {
           let [referralUser] = PublicKey.findProgramAddressSync([
             Buffer.from("user"), 
             referral.toBuffer()
           ], program.programId)
+
         let referralAccountMaybe = referral ? await program.account.user.fetch(referralUser) : null;
         while (referralAccountMaybe != undefined) {
+          
           remainingAccounts.push({
             pubkey: referral,
             isSigner: false,
             isWritable: true,
           })
-          if (remainingAccounts.length > 10) {
-            break;
-          }
+          count++
           referral = referralAccountMaybe.referral;
           [referralUser] = PublicKey.findProgramAddressSync([
             Buffer.from("user"), 
@@ -262,9 +285,62 @@ async function checkTxSignatures() {
         }
       } catch (err){
       }
+      let lookupTables: AddressLookupTableAccount[] = []
+      if (lookup != undefined){
+        const lutKeys = lookup.lookupTables;
+        for (let lut of lutKeys) {
+          const lutMaybe = await connection.getAddressLookupTable(lut)
+          if (lutMaybe.value != undefined){
+            lookupTables.push(lutMaybe.value)
+            remainingAccounts.push({
+              pubkey: lut,
+              isSigner: false,
+              isWritable: true,
+            })
+          }
+        }
+        if (lookupTables[lookupTables.length-1].state.addresses.length > 200){
+          const [instruction, newLut] = await AddressLookupTableProgram.createLookupTable({
+          authority: providerKeypair.publicKey,
+          payer: providerKeypair.publicKey,
+          recentSlot: (await connection.getSlot())-50
+          })
+          const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})).add(instruction)
+          if (!program.provider.sendAndConfirm) continue
+          await program.provider.sendAndConfirm(tx)
+          const lutMaybe = await connection.getAddressLookupTable(newLut)
+          if (lutMaybe.value != undefined){
+            lookupTables.push(lutMaybe.value)
+            remainingAccounts.push({
+              pubkey: newLut,
+              isSigner: false,
+              isWritable: true,
+            })
+          }
+        }
+        
+      }
+      else {
+        const [instruction, newLut] = await AddressLookupTableProgram.createLookupTable({
+          authority: providerKeypair.publicKey,
+          payer: providerKeypair.publicKey,
+          recentSlot: (await connection.getSlot())-50
+          })
+          const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})).add(instruction)
+          if (!program.provider.sendAndConfirm) continue
+          await program.provider.sendAndConfirm(tx)
+          const lutMaybe = await connection.getAddressLookupTable(newLut)
+          if (lutMaybe.value != undefined){
+            lookupTables.push(lutMaybe.value)
+            remainingAccounts.push({
+              pubkey: newLut,
+              isSigner: false,
+              isWritable: true,
+            })
+          }
+        }
         while (!confirmed) {
-          
-        const tx = await program.methods.reveal()
+        const tx = await program.methods.reveal(count, lookupTables.length)
           .accounts({
             user: user.pubkey,
             recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
@@ -274,11 +350,25 @@ async function checkTxSignatures() {
           .remainingAccounts(remainingAccounts)
           .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
           .signers([providerKeypair])
-          .rpc();
-           try {
+          .transaction();
+          const messageV0 = new TransactionMessage({
+            payerKey: providerKeypair.publicKey,
+            recentBlockhash: (await connection.getLatestBlockhash()).blockhash,
+            instructions: tx.instructions, // note this is an array of instructions
+          }).compileToV0Message(lookupTables);
+           
+          // create a v0 transaction from the v0 message
+          const transactionV0 = new VersionedTransaction(messageV0);
+           
+          // sign the v0 transaction using the file system wallet we created named `payer`
+          transactionV0.sign([providerKeypair]);
+           
+          const sig = await connection.sendRawTransaction(transactionV0.serialize())
+          console.log(sig)
+          try {
             const confirming = (await connection.getLatestBlockhash())
             const result = await connection.confirmTransaction({
-              signature: tx,
+              signature: sig,
               blockhash: confirming.blockhash,
               lastValidBlockHeight: confirming.lastValidBlockHeight,
             })
@@ -345,11 +435,49 @@ app.openapi(
     const amount = c.req.param('amount') ;
     const { account } = (await c.req.json()) as ActionsSpecPostRequestBody;
     const blockhash =  (await connection.getLatestBlockhash()).blockhash
+
+    let remainingAccounts: AccountMeta [] = []
+
+    const [userAccount] = PublicKey.findProgramAddressSync([
+      Buffer.from("user"), 
+      new PublicKey(account).toBuffer()
+    ], program.programId)
+    const userAccountInfoMaybe = await connection.getAccountInfo(userAccount)
+    if (userAccountInfoMaybe !== undefined) {
+   
+    const ua =  (await program.account.user.fetch(userAccount))
+    let referral = ua.referral
+    try {
+      let [referralUser] = PublicKey.findProgramAddressSync([
+        Buffer.from("user"), 
+        referral.toBuffer()
+      ], program.programId)
+    let referralAccountMaybe = referral ? await program.account.user.fetch(referralUser) : null;
+    while (referralAccountMaybe != undefined) {
+      remainingAccounts.push({
+        pubkey: referral,
+        isSigner: false,
+        isWritable: true,
+      })
+      if (remainingAccounts.length > 10) {
+        break;
+      }
+      referral = referralAccountMaybe.referral;
+      [referralUser] = PublicKey.findProgramAddressSync([
+        Buffer.from("user"), 
+        referral.toBuffer()
+      ], program.programId)
+      referralAccountMaybe = await program.account.user.fetch(referralUser);
+    }
+  } catch (err){
+    console.log(err)
+  }
+}
     const tx = await program.methods.commit(new BN(parseFloat(amount) * 10 ** 9))
         .accounts({
             user: new PublicKey(account),
             referral: new PublicKey(solamiAddress),
-        })
+        }).remainingAccounts(remainingAccounts)
         .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333}),
           SystemProgram.transfer({
             fromPubkey: new PublicKey(account),
