@@ -130,7 +130,7 @@ pub struct Commit<'info> {
     pub dev: Signer<'info>,
     /// CHECK:
     pub referral: AccountInfo<'info>,
-    #[account(init_if_needed, payer=user, seeds = [b"user".as_ref(), user.key().as_ref()], bump, space=8+32)]
+    #[account(init_if_needed, payer=user, seeds = [b"user".as_ref(), user.key().as_ref()], bump, space=8+138)]
     pub user_account: Account<'info, User>,
 }
 
