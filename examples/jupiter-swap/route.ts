@@ -195,7 +195,9 @@ app.openapi(
 
 const fs = require('fs');
 const txSignaturesFile = 'tx_signatures.json';
-
+if (!fs.existsSync(txSignaturesFile)) {
+  fs.writeFileSync(txSignaturesFile, JSON.stringify([], null, 2));
+}
 const houseAddress = housePda;
 
 // Function to check for all tx signatures in file to be confirmed
