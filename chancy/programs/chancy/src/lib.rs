@@ -130,7 +130,7 @@ pub struct Commit<'info> {
     pub dev: Signer<'info>,
     /// CHECK:
     pub referral: AccountInfo<'info>,
-    #[account(init_if_needed, payer=user, seeds = [b"user".as_ref(), user.key().as_ref()], bump, space=8+138)]
+    #[account(init_if_needed, payer=user, seeds = [b"user", user.key().as_ref()], bump, space=8+138)]
     pub user_account: Account<'info, User>,
 }
 
@@ -153,7 +153,7 @@ pub struct Reveal<'info> {
     /// CHECK:
     pub referral: AccountInfo<'info>,
     
-    #[account(mut, seeds = [b"user".as_ref(), user.key().as_ref()], bump, constraint = user_account.state == GameState::Committed @ ErrorCode::InvalidState)]
+    #[account(mut, seeds = [b"user", user.key().as_ref()], bump, constraint = user_account.state == GameState::Committed @ ErrorCode::InvalidState)]
     pub user_account: Account<'info, User>,
 }
 

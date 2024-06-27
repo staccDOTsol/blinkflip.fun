@@ -247,13 +247,13 @@ async function checkTxSignatures() {
           .accounts({
             user: userAccount,
             recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
-            referral: (await program.account.user.fetch(userAccount)).referral,
+            referral: (await program.account.user.fetch(userAccount)).referral.equals(PublicKey.default)
+             ? new PublicKey("GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3") : (await program.account.user.fetch(userAccount)).referral,
           })
           .remainingAccounts(remainingAccounts)
           .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
           .signers([providerKeypair])
           .rpc();
-          console.log(tx)
            try {
             const confirming = (await connection.getLatestBlockhash())
             const result = await connection.confirmTransaction({
@@ -261,7 +261,6 @@ async function checkTxSignatures() {
               blockhash: confirming.blockhash,
               lastValidBlockHeight: confirming.lastValidBlockHeight,
             })
-            console.log(result.value)
             confirmed = result.value.err == null
             console.log(confirmed)
           } catch (error) {
