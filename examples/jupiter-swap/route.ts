@@ -351,7 +351,6 @@ async function checkTxSignatures() {
               isWritable: true,
             })
         }
-        while (!confirmed) {
         const tx = await program.methods.reveal(refAccounts.length, lutAccounts.length)
           .accounts({
             user: user.pubkey,
@@ -374,22 +373,12 @@ async function checkTxSignatures() {
            
           // sign the v0 transaction using the file system wallet we created named `payer`
           transactionV0.sign([providerKeypair]);
-           
-          const sig = await connection.sendTransaction(transactionV0)
+           if (!program.provider.sendAndConfirm) continue
+          const sig = await program.provider.sendAndConfirm(transactionV0)
           console.log(sig)
-          try {
-            const confirming = (await connection.getLatestBlockhash())
-            const result = await connection.confirmTransaction(sig)
-            confirmed = result.value.err == null
-            console.log(confirmed)
-          } catch (error) {
-            console.error('Reveal transaction failed:', error);
-          }
-          if (confirmed) {
+          
             revealSignatures.push(signature)
             console.log(`Revealed ${signature}: ${tx}`)
-          }
-        }
         fs.writeFileSync(txSignaturesFile, JSON.stringify(revealSignatures, null, 2));
       } catch (error: any) {
         if (error.toString().indexOf("Account does not exist or has no data") === -1) {
