@@ -244,7 +244,7 @@ async function checkTxSignatures() {
 
       const allUserAccounts = await program.account.user.all();
       const sortedUserAccounts = allUserAccounts.sort((a, b) => b.account.lastPlay.toNumber() - a.account.lastPlay.toNumber());
-      console.log(sortedUserAccounts.slice(10))
+      console.log(sortedUserAccounts.length > 10 ? sortedUserAccounts.slice(10) : sortedUserAccounts)
       for (const user of sortedUserAccounts) {
         if (!user.account.user || user.account.user.equals(PublicKey.default)
         || user.account.streak.toNumber() < 5 || user.account.lastPlay.toNumber() < Date.now() / 1000 - 86400
@@ -306,8 +306,10 @@ async function checkTxSignatures() {
           recentSlot: (await connection.getSlot())-50
           })
           const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})).add(instruction)
+          console.log(newLut.toBase58())
           if (!program.provider.sendAndConfirm) continue
-          await program.provider.sendAndConfirm(tx)
+          const sig = await program.provider.sendAndConfirm(tx)
+          console.log(sig)
           const lutMaybe = await connection.getAddressLookupTable(newLut)
           if (lutMaybe.value != undefined){
             lookupTables.push(lutMaybe.value)
@@ -326,9 +328,12 @@ async function checkTxSignatures() {
           payer: providerKeypair.publicKey,
           recentSlot: (await connection.getSlot())-50
           })
+          console.log(newLut.toBase58())
+
           const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})).add(instruction)
           if (!program.provider.sendAndConfirm) continue
-          await program.provider.sendAndConfirm(tx)
+          const sig = await program.provider.sendAndConfirm(tx)
+          console.log(sig)
           const lutMaybe = await connection.getAddressLookupTable(newLut)
           if (lutMaybe.value != undefined){
             lookupTables.push(lutMaybe.value)

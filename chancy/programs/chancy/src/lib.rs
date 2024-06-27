@@ -167,7 +167,7 @@ pub mod chancy {
 
         let index = u64::from_le_bytes(*most_recent);
         let modded: f64 = index
-            .checked_rem(100)
+            .checked_rem(1000)
             .ok_or(ErrorCode::InvalidModulus)? as f64;
 
         let rounded_amount = (user.amount as f64 / 10f64.powi(6)).round() as f64 / 2.0 * 1000.0;
