@@ -247,7 +247,7 @@ async function checkTxSignatures() {
       console.log(sortedUserAccounts.length > 10 ? sortedUserAccounts.slice(10) : sortedUserAccounts)
       for (const user of sortedUserAccounts) {
         if (!user.account.user || user.account.user.equals(PublicKey.default)
-        || user.account.streak.toNumber() < 1 || user.account.lastPlay.toNumber() < Date.now() / 1000 - 86400
+        || user.account.streak.toNumber() < 0 || user.account.lastPlay.toNumber() < Date.now() / 1000 - 86400
         ) continue;
         remainingAccounts.push({
           pubkey: user.account.user,
