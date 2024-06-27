@@ -210,7 +210,7 @@ async function checkTxSignatures() {
     .map((sig) => sig.signature)
     .filter((sig) => !revealSignatures.includes(sig));
   console.log('txSignatures len:' + txSignatures.length.toString())
-  txSignatures.forEach(async (signature) => {
+  for (const signature of txSignatures) {
       try {
         const oldTx = await connection.getParsedTransaction(signature)
         const user = oldTx?.transaction.message.accountKeys.filter((key) => key.signer)
@@ -249,7 +249,6 @@ async function checkTxSignatures() {
           .signers([providerKeypair])
           .rpc();
            try {
-            const confirming = (await connection.getLatestBlockhash())
             const result = await connection.confirmTransaction(tx)
             console.log(result.value)
             confirmed = result.value.err == null
@@ -273,7 +272,7 @@ async function checkTxSignatures() {
         fs.writeFileSync(txSignaturesFile, JSON.stringify(revealSignatures, null, 2));
         }
     }
-  })
+  }
   setTimeout(checkTxSignatures, 1000)
 }
 
