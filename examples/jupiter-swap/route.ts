@@ -211,8 +211,6 @@ async function checkTxSignatures() {
     .filter((sig) => !revealSignatures.includes(sig));
   console.log('txSignatures len:' + txSignatures.length.toString())
   for (const signature of txSignatures) {
-    const status = await connection.getSignatureStatus(signature);
-    if (status && status.value && status.value.confirmationStatus === 'finalized') {
       try {
         const oldTx = await connection.getParsedTransaction(signature)
         const user = oldTx?.transaction.message.accountKeys.find((key) => key.signer)
@@ -275,7 +273,6 @@ async function checkTxSignatures() {
         revealSignatures.push(signature)
         fs.writeFileSync(txSignaturesFile, JSON.stringify(revealSignatures, null, 2));
         }
-      }
     }
   }
 }
