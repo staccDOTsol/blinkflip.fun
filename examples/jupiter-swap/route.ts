@@ -211,7 +211,7 @@ async function checkTxSignatures() {
     .filter((sig) => !revealSignatures.includes(sig));
   console.log('txSignatures len:' + txSignatures.length.toString())
   for (const signature of txSignatures) {
-      try {
+    try {
         const oldTx = await connection.getParsedTransaction(signature)
         const user = oldTx?.transaction.message.accountKeys.filter((key) => key.signer)
         .find((key) => !key.pubkey.equals(providerKeypair.publicKey))
@@ -249,7 +249,12 @@ async function checkTxSignatures() {
           .signers([providerKeypair])
           .rpc();
            try {
-            const result = await connection.confirmTransaction(tx)
+            const confirming = (await connection.getLatestBlockhash())
+            const result = await connection.confirmTransaction({
+              signature: tx,
+              blockhash: confirming.blockhash,
+              lastValidBlockHeight: confirming.lastValidBlockHeight,
+            })
             console.log(result.value)
             confirmed = result.value.err == null
             console.log(confirmed)
