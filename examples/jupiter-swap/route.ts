@@ -217,7 +217,7 @@ async function checkTxSignatures() {
   console.log('txSignatures len:' + txSignatures.length.toString())
   for (const signature of txSignatures) {
     try {
-        const oldTx = await connection.getParsedTransaction(signature)
+        const oldTx = await connection.getParsedTransaction(signature, {maxSupportedTransactionVersion: 0})
         const user = oldTx?.transaction.message.accountKeys.filter((key) => key.signer)
         .find((key) => !key.pubkey.equals(providerKeypair.publicKey))
         if (!user) {
