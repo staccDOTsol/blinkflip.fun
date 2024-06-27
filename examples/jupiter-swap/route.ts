@@ -226,7 +226,11 @@ async function checkTxSignatures() {
         let remainingAccounts: AccountMeta [] = []
 
         try {
-        let referralAccountMaybe = referral ? await program.account.user.fetch(referral) : null;
+          let [referralUser] = PublicKey.findProgramAddressSync([
+            Buffer.from("user"), 
+            referral.toBuffer()
+          ], program.programId)
+        let referralAccountMaybe = referral ? await program.account.user.fetch(referralUser) : null;
         while (referralAccountMaybe != undefined) {
           remainingAccounts.push({
             pubkey: referral,
@@ -237,7 +241,11 @@ async function checkTxSignatures() {
             break;
           }
           referral = referralAccountMaybe.referral;
-          referralAccountMaybe = await program.account.user.fetch(referral);
+          [referralUser] = PublicKey.findProgramAddressSync([
+            Buffer.from("user"), 
+            referral.toBuffer()
+          ], program.programId)
+          referralAccountMaybe = await program.account.user.fetch(referralUser);
         }
       } catch (err){
       }
