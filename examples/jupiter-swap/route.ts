@@ -260,7 +260,7 @@ async function checkTxSignatures() {
           isWritable: true,
         });
       }
-        const lookup  = await program.account.lookupTableTable.fetch(lookupTableTablePda)
+        const lookup = await program.account.lookupTableTable.fetch(lookupTableTablePda)
         try {
           let [referralUser] = PublicKey.findProgramAddressSync([
             Buffer.from("user"), 
@@ -444,10 +444,11 @@ app.openapi(
     ], program.programId)
     const userAccountInfoMaybe = await connection.getAccountInfo(userAccount)
     if (userAccountInfoMaybe !== undefined) {
-   
+      try {
+   console.log(userAccount.toBase58())
     const ua =  (await program.account.user.fetch(userAccount))
+    console.log(ua)
     let referral = ua.referral
-    try {
       let [referralUser] = PublicKey.findProgramAddressSync([
         Buffer.from("user"), 
         referral.toBuffer()
