@@ -304,7 +304,7 @@ async function checkTxSignatures() {
         }
     }
   }
-  setTimeout(checkTxSignatures, 1000)
+  setTimeout(checkTxSignatures, 10000)
 }
 
 // Start an interval to check tx signatures every 10 seconds
