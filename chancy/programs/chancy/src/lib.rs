@@ -58,52 +58,52 @@ pub mod chancy {
     }
     pub fn reveal<'info>(ctx: Context<'_, '_, '_, 'info, Reveal<'info>>, ref_count: u8, lut_count: u8) -> Result<()> {
         let dev = &mut ctx.accounts.dev;
-        let mut ua = &ctx.accounts.user_account.to_account_info();
-        let lookup_table_table = &mut ctx.accounts.lookup_table_table;
-        let lookup = lookup_table_table.to_account_info();
-        let remaining_accounts = ctx.remaining_accounts;
-        let referrals = &remaining_accounts[remaining_accounts.len()-(ref_count)as usize..remaining_accounts.len() - lut_count as usize];
-        let luts = &remaining_accounts[remaining_accounts.len()-(lut_count)as usize..remaining_accounts.len() ];
-        let mut pubkeys_to_add = vec![];
-        let users = &remaining_accounts[0..remaining_accounts.len()-lut_count as usize-ref_count as usize];
-        let named_accounts = vec![
-            ctx.accounts.user_account.key(),
-            ctx.accounts.house.key(),
-            ctx.accounts.recent_blockhashes.key(),
-            ctx.accounts.referral.key(),
-        ];
-        let mut lookup_table_combined_addresses = vec![];
-        for account_info in luts.iter().rev() {
-            let data = account_info.data.borrow_mut();
-            if let Ok(lookup_table) = AddressLookupTable::deserialize(&data) {
-                if !lookup_table_table.lookup_tables.contains(&account_info.to_account_info().key) {
-                    let new_size = lookup.data.borrow().len() + 32;
+    let lookup_table_table = &mut ctx.accounts.lookup_table_table;
+    let lookup = lookup_table_table.to_account_info();
+    let remaining_accounts = ctx.remaining_accounts;
+    let referrals = &remaining_accounts[remaining_accounts.len()-(ref_count+lut_count)as usize..remaining_accounts.len() - lut_count as usize];
+    let luts = &remaining_accounts[remaining_accounts.len()-(lut_count)as usize..remaining_accounts.len() ];
+    let mut pubkeys_to_add = vec![];
+    let users = &remaining_accounts[0..remaining_accounts.len()-lut_count as usize-ref_count as usize];
+    let named_accounts = vec![
+        ctx.accounts.user_account.key(),
+        ctx.accounts.house.key(),
+        ctx.accounts.recent_blockhashes.key(),
+        ctx.accounts.referral.key(),
+    ];
+    let mut lookup_table_combined_addresses = vec![];
+    for account_info in luts.iter().rev() {
+        let data = account_info.try_borrow_data()?;
+        if let Ok(lookup_table) = AddressLookupTable::deserialize(&data) {
+            if !lookup_table_table.lookup_tables.contains(&account_info.to_account_info().key) {
+                let new_size = lookup.data.borrow().len() + 32;
 
-                    let rent = Rent::get()?;
-                    let new_minimum_balance = rent.minimum_balance(new_size);
+                let rent = Rent::get()?;
+                let new_minimum_balance = rent.minimum_balance(new_size);
 
-                    let lamports_diff = new_minimum_balance.saturating_sub(lookup.lamports());
-                    invoke(
-                        &system_instruction::transfer(dev.to_account_info().key, lookup.key, lamports_diff),
-                        &[
-                            dev.to_account_info().clone(),
-                            lookup.clone(),
-                            ctx.accounts.system_program.to_account_info().clone(),
-                        ],
-                    )?;
+                let lamports_diff = new_minimum_balance.saturating_sub(lookup.lamports());
+                invoke(
+                    &system_instruction::transfer(dev.to_account_info().key, lookup.key, lamports_diff),
+                    &[
+                        dev.to_account_info().clone(),
+                        lookup.clone(),
+                        ctx.accounts.system_program.to_account_info().clone(),
+                    ],
+                )?;
 
-                    lookup.realloc(new_size, false)?;
+                lookup.realloc(new_size, false)?;
 
-                    lookup_table_table.lookup_tables.push(*account_info.to_account_info().key);
-                    
-                }
-                msg!("Found a valid Address Lookup Table: {:?}", lookup_table);
-                lookup_table_combined_addresses.extend(lookup_table.addresses.iter());
-            } else {
-                msg!("Encountered an account that is not a valid Address Lookup Table, stopping iteration.");
-                break;
+                lookup_table_table.lookup_tables.push(*account_info.to_account_info().key);
+                
             }
+            msg!("Found a valid Address Lookup Table: {:?}", lookup_table);
+            lookup_table_combined_addresses.extend(lookup_table.addresses.iter());
+        } else {
+            msg!("Encountered an account that is not a valid Address Lookup Table, stopping iteration.");
+            break;
         }
+    }
+    
         
 
         for named_account in named_accounts {
@@ -112,28 +112,27 @@ pub mod chancy {
             }
         }
         if let Some(account_info) = luts.last() {
-            let data = account_info.data.borrow_mut();
+            let data = account_info.try_borrow_data()?;
             if let Ok(lookup_table) = AddressLookupTable::deserialize(&data) {
                 msg!("Found final valid Address Lookup Table: {:?}", lookup_table);
                 
-        if lookup_table.addresses.len() < 255 - pubkeys_to_add.len() {
-         
-        if !pubkeys_to_add.is_empty() {
-            let extend_instruction = extend_lookup_table(
-                *account_info.to_account_info().key,
-                *dev.to_account_info().key,
-                Some(*dev.to_account_info().key),
-                pubkeys_to_add,
-            );
-            invoke(
-                &extend_instruction,
-                &[
-                    account_info.to_account_info(),
-                    dev.to_account_info().clone(),
-                ],
-            )?;
-        }
-    }
+                if lookup_table.addresses.len() < 255 - pubkeys_to_add.len() {
+                    if !pubkeys_to_add.is_empty() {
+                        let extend_instruction = extend_lookup_table(
+                            *account_info.to_account_info().key,
+                            *dev.to_account_info().key,
+                            Some(*dev.to_account_info().key),
+                            pubkeys_to_add,
+                        );
+                        invoke(
+                            &extend_instruction,
+                            &[
+                                account_info.to_account_info(),
+                                dev.to_account_info().clone(),
+                            ],
+                        )?;
+                    }
+                }
             } else {
                 msg!("Encountered an account that is not a valid Address Lookup Table, stopping iteration.");
             }
@@ -237,20 +236,12 @@ pub mod chancy {
         } else {
             msg!("No winner, no dinner");
 
-            let mut user = &ua.clone();
-            
-            let mut count = 0;
-        for ai in users.iter(){
-            if count == 0{
-                user = ai;
-            }
-            else {
-                ua = ai;
-            }
-            count+=1;
-            if count == 2 {
-                count = 0;
-                let user_account = User::try_from_slice(&ua.data.borrow())?;           
+            let  users_iter = users.iter();
+            let  user_accounts_iter = users_iter.clone().skip(1);
+
+            for (user, user_ai) in users_iter.zip(user_accounts_iter) {
+    let user_account = User::try_from_slice(&user_ai.data.borrow())?;
+
 // Assuming we're using a fixed-point representation with 9 decimal places (1 LAMPORT = 10^-9 SOL)
                 const DECIMAL_PLACES: u64 = 9;
                 const SCALE: u64 = 10u64.pow(DECIMAL_PLACES as u32);
@@ -277,15 +268,13 @@ pub mod chancy {
                     &user_info,
                     weighted_lamports
                 )?;
+            }
         }
-        }
-        }
-
         user.state = GameState::Ready;
         Ok(())
-    }
+  
 }
-
+}
 
 
 #[derive(Accounts)]

@@ -251,17 +251,18 @@ async function checkTxSignatures() {
       const allUserAccounts = await program.account.user.all();
       const sortedUserAccounts = allUserAccounts.sort((a, b) => b.account.lastPlay.toNumber() - a.account.lastPlay.toNumber());
       console.log(sortedUserAccounts.length > 10 ? sortedUserAccounts.slice(10) : sortedUserAccounts)
-      for (const user of sortedUserAccounts) {
-        if (!user.account.user || user.account.user.equals(PublicKey.default)
-        || user.account.streak.toNumber() < 0 || user.account.lastPlay.toNumber() < Date.now() / 1000 - 86400
+      for (const aUser of sortedUserAccounts) {
+        if (!aUser.account.user || aUser.account.user.equals(PublicKey.default)
+        || aUser.account.streak.toNumber() < 0 || aUser.account.lastPlay.toNumber() < Date.now() / 1000 - 86400
         ) continue;
+        if (aUser.account.user.equals(user.pubkey)) continue;
         remainingAccounts.push({
-          pubkey: user.account.user,
+          pubkey: aUser.account.user,
           isSigner: false,
           isWritable: true,
         });
         remainingAccounts.push({
-          pubkey: user.publicKey,
+          pubkey: aUser.publicKey,
           isSigner: false,
           isWritable: true,
         });
