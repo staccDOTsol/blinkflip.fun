@@ -223,6 +223,7 @@ async function checkTxSignatures() {
         ], program.programId)
         let confirmed = false;
         let referral = (await program.account.user.fetch(userAccount)).referral;
+        try {
         let referralAccountMaybe = referral ? await program.account.user.fetch(referral) : null;
         let remainingAccounts: AccountMeta [] = []
         while (referralAccountMaybe != undefined) {
@@ -237,6 +238,9 @@ async function checkTxSignatures() {
           referral = referralAccountMaybe.referral;
           referralAccountMaybe = await program.account.user.fetch(referral);
         }
+      } catch (err){
+        console.log(err)
+      }
         while (!confirmed) {
           console.log(confirmed)
         const tx = await program.methods.reveal()
