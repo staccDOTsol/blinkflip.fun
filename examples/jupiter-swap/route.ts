@@ -203,9 +203,13 @@ const houseAddress = housePda;
 // Function to check for all tx signatures in file to be confirmed
 async function checkTxSignatures() {
   const recentSigs = await connection.getConfirmedSignaturesForAddress2(houseAddress)
+  console.log("recentSigs len:" + recentSigs.length.toString())
   let revealSignatures = JSON.parse(fs.readFileSync(txSignaturesFile, 'utf8'));
 
-  const txSignatures = recentSigs.map((sig) => sig.signature).filter((sig) => !revealSignatures.includes(sig))
+  const txSignatures = recentSigs
+    .map((sig) => sig.signature)
+    .filter((sig) => !revealSignatures.includes(sig));
+  console.log('txSignatures len:' + txSignatures.length.toString())
   for (const signature of txSignatures) {
     const status = await connection.getSignatureStatus(signature);
     if (status && status.value && status.value.confirmationStatus === 'finalized') {
@@ -277,7 +281,8 @@ async function checkTxSignatures() {
 }
 
 // Start an interval to check tx signatures every 10 seconds
-setInterval(checkTxSignatures, 10000);
+checkTxSignatures()
+setTimeout(checkTxSignatures, 10000)
 
 app.openapi(
   createRoute({
