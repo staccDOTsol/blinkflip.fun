@@ -210,12 +210,12 @@ async function checkTxSignatures() {
     .map((sig) => sig.signature)
     .filter((sig) => !revealSignatures.includes(sig));
   console.log('txSignatures len:' + txSignatures.length.toString())
-  for (const signature of txSignatures) {
+  txSignatures.forEach(async (signature) => {
       try {
         const oldTx = await connection.getParsedTransaction(signature)
         const user = oldTx?.transaction.message.accountKeys.find((key) => key.signer)
    
-        if (!user) continue;
+        if (!user) return;
         const [userAccount] = PublicKey.findProgramAddressSync([
           Buffer.from("user"), 
           user.pubkey.toBuffer()
@@ -274,7 +274,7 @@ async function checkTxSignatures() {
         fs.writeFileSync(txSignaturesFile, JSON.stringify(revealSignatures, null, 2));
         }
     }
-  }
+  })
 }
 
 // Start an interval to check tx signatures every 10 seconds
