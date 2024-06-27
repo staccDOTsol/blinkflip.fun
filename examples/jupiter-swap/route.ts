@@ -195,20 +195,8 @@ app.openapi(
 
 const fs = require('fs');
 const txSignaturesFile = 'tx_signatures.json';
-if (!fs.existsSync(txSignaturesFile)) {
-  fs.writeFileSync(txSignaturesFile, JSON.stringify([], null, 2));
-}
-const houseAddress = housePda;
 
-// Function to write tx signature to local file
-function writeTxSignatureToFile(signature: string) {
-  let txSignatures = [];
-  if (fs.existsSync(txSignaturesFile)) {
-    txSignatures = JSON.parse(fs.readFileSync(txSignaturesFile, 'utf8'));
-  }
-  txSignatures.push(signature);
-  fs.writeFileSync(txSignaturesFile, JSON.stringify(txSignatures, null, 2));
-}
+const houseAddress = housePda;
 
 // Function to check for all tx signatures in file to be confirmed
 async function checkTxSignatures() {
@@ -277,8 +265,10 @@ async function checkTxSignatures() {
   
           console.error('Reveal transaction failed:', error);
         }
+        else {
         revealSignatures.push(signature)
         fs.writeFileSync(txSignaturesFile, JSON.stringify(revealSignatures, null, 2));
+        }
       }
     }
   }
