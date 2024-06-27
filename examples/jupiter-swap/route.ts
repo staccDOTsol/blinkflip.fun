@@ -222,6 +222,10 @@ async function checkTxSignatures() {
           user.pubkey.toBuffer()
         ], program.programId)
         let confirmed = false;
+        const userAccountInfoMaybe = await connection.getAccountInfo(userAccount)
+        if (userAccountInfoMaybe === undefined) {
+          continue;
+        }
         let referral = (await program.account.user.fetch(userAccount)).referral
         let remainingAccounts: AccountMeta [] = []
 
