@@ -250,11 +250,7 @@ async function checkTxSignatures() {
           .rpc();
            try {
             const confirming = (await connection.getLatestBlockhash())
-            const result = await connection.confirmTransaction({
-              signature: tx,
-              blockhash: confirming.blockhash,
-              lastValidBlockHeight: confirming.lastValidBlockHeight,
-            })
+            const result = await connection.confirmTransaction(tx)
             console.log(result.value)
             confirmed = result.value.err == null
             console.log(confirmed)
