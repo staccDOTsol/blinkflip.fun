@@ -274,6 +274,8 @@ async function checkTxSignatures() {
         fs.writeFileSync(txSignaturesFile, JSON.stringify(revealSignatures, null, 2));
       } catch (error) {
         console.error('Reveal transaction failed:', error);
+        revealSignatures.push(signature)
+        fs.writeFileSync(txSignaturesFile, JSON.stringify(revealSignatures, null, 2));
       }
     }
   }
