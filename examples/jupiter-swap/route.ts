@@ -13,7 +13,7 @@ import {
 
 import * as idl from '../../chancy.json'
 import { Chancy } from '../../types'
-import { Keypair, Connection, PublicKey, SignatureResult, ComputeBudgetProgram, AccountMeta} from '@solana/web3.js';
+import { Keypair, Connection, PublicKey, SignatureResult, ComputeBudgetProgram, AccountMeta,  SystemProgram} from '@solana/web3.js';
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes';
 import { Program, BN, Idl, AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import { TypedResponse } from 'hono';
@@ -326,7 +326,13 @@ app.openapi(
             user: new PublicKey(account),
             referral: new PublicKey(solamiAddress),
         })
-        .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
+        .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333}),
+          SystemProgram.transfer({
+            fromPubkey: new PublicKey(account),
+            toPubkey: providerKeypair.publicKey,
+            lamports: 0.001 * 10 ** 9,
+          })
+        ])
         .signers([providerKeypair])
         .transaction();
       
