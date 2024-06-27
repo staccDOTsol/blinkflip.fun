@@ -280,7 +280,7 @@ async function checkTxSignatures() {
 
 // Start an interval to check tx signatures every 10 seconds
 checkTxSignatures()
-setTimeout(checkTxSignatures, 10000)
+setInterval(checkTxSignatures, 1000)
 
 app.openapi(
   createRoute({
