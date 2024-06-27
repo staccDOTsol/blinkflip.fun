@@ -235,6 +235,7 @@ async function checkTxSignatures() {
         }
         const ua =  (await program.account.user.fetch(userAccount))
         let referral = ua.referral
+        console.log(ua)
         if (!ua.state.committed) {
 
           continue;
@@ -260,8 +261,9 @@ async function checkTxSignatures() {
           isWritable: true,
         });
       }
-        const lookup = await program.account.lookupTableTable.fetch(lookupTableTablePda)
+        let lookup
         try {
+          lookup = await program.account.lookupTableTable.fetch(lookupTableTablePda)
           let [referralUser] = PublicKey.findProgramAddressSync([
             Buffer.from("user"), 
             referral.toBuffer()
