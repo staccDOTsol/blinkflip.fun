@@ -255,7 +255,6 @@ async function checkTxSignatures() {
         if (!aUser.account.user || aUser.account.user.equals(PublicKey.default)
         || aUser.account.streak.toNumber() < 0 || aUser.account.lastPlay.toNumber() < Date.now() / 1000 - 86400
         ) continue;
-        if (aUser.account.user.equals(user.pubkey)) continue;
         remainingAccounts.push({
           pubkey: aUser.account.user,
           isSigner: false,
@@ -277,7 +276,6 @@ async function checkTxSignatures() {
 
         let referralAccountMaybe = await program.account.user.fetch(referralUser);
         while (referralAccountMaybe != undefined) {
-          if (referral.equals(user.pubkey)) break;
           refAccounts.push({
             pubkey: referral,
             isSigner: false,
@@ -287,7 +285,6 @@ async function checkTxSignatures() {
           if (count == 10) break;
           try {
           referral = referralAccountMaybe.referral;
-      if (referral.equals(PublicKey.default)) break;
           [referralUser] = PublicKey.findProgramAddressSync([
             Buffer.from("user"), 
             referral.toBuffer()
@@ -358,7 +355,7 @@ async function checkTxSignatures() {
             referral: (await program.account.user.fetch(userAccount)).referral.equals(PublicKey.default)
              ? new PublicKey("GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3") : (await program.account.user.fetch(userAccount)).referral,
           })
-          .remainingAccounts([...remainingAccounts, ...refAccounts, ...lutAccounts])
+          .remainingAccounts([...remainingAccounts, ...refAccounts, ...lutAccounts].filter((a) => !a.pubkey.equals(user.pubkey) && !a.pubkey.equals(PublicKey.default)))
           .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
           .signers([providerKeypair])
           .transaction();
@@ -454,7 +451,6 @@ app.openapi(
 
     let referralAccountMaybe = await program.account.user.fetch(referralUser) ;
     while (referralAccountMaybe != undefined) {
-      if (referral.equals(new PublicKey(account))) break;
       remainingAccounts.push({
         pubkey: referral,
         isSigner: false,
@@ -463,7 +459,6 @@ app.openapi(
       count++
       if (count > 10) break;
       referral = referralAccountMaybe.referral;
-      if (referral.equals(PublicKey.default)) break;
       [referralUser] = PublicKey.findProgramAddressSync([
         Buffer.from("user"), 
         referral.toBuffer()
@@ -478,7 +473,8 @@ app.openapi(
         .accounts({
             user: new PublicKey(account),
             referral: new PublicKey(solamiAddress),
-        }).remainingAccounts(remainingAccounts)
+        })            .remainingAccounts(remainingAccounts.filter((a) => !a.pubkey.equals(new PublicKey(account)) && !a.pubkey.equals(PublicKey.default)))
+
         .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333}),
           SystemProgram.transfer({
             fromPubkey: new PublicKey(account),
