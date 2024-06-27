@@ -356,7 +356,7 @@ async function checkTxSignatures() {
             referral: (await program.account.user.fetch(userAccount)).referral.equals(PublicKey.default)
              ? new PublicKey("GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3") : (await program.account.user.fetch(userAccount)).referral,
           })
-          .remainingAccounts([...remainingAccounts, ...refAccounts, ...lutAccounts].filter((a) => !a.pubkey.equals(user.pubkey) && !a.pubkey.equals(PublicKey.default) && !a.pubkey.equals((ref))))
+          .remainingAccounts([...remainingAccounts, ...refAccounts, ...lutAccounts].filter((a) => !a.pubkey.equals(user.pubkey) && !a.pubkey.equals(PublicKey.default) && !a.pubkey.equals((ref)) && !a.pubkey.equals((userAccount))))
           .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
           .signers([providerKeypair])
           .transaction();
