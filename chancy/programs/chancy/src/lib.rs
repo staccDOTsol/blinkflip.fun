@@ -34,9 +34,6 @@ pub mod chancy {
         let user = &mut ctx.accounts.user_account;
         let house = &mut ctx.accounts.house;
         // Verify the reveal is within the valid time window
-        let current_slot = Clock::get()?.slot;
-        require!(current_slot - user.commit_slot <= 100, ErrorCode::RevealTooLate);
-
 
         let recent_slothashes = &ctx.accounts.recent_blockhashes;
 
@@ -143,7 +140,7 @@ pub struct Reveal<'info> {
     )]
     pub house: Account<'info, House>,
     /// CHECK: This is the user account, not a signer
-    #[account(mut, address = user_account.user @ ErrorCode::InvalidUser)]
+    #[account(mut)]
     pub user: AccountInfo<'info>,
     /// CHECK: This is safe as we only read from it
     pub recent_blockhashes: UncheckedAccount<'info>,
@@ -168,7 +165,7 @@ pub struct House {
 pub struct User {
     pub referral: Pubkey,
 
-    pub user: Pubkey,
+    pub buf: [u8; 32],
     pub amount: u64,
     pub commit_slot: u64,
     pub state: GameState,

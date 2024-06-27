@@ -258,8 +258,13 @@ export type Chancy = {
             "type": "pubkey"
           },
           {
-            "name": "user",
-            "type": "pubkey"
+            "name": "buf",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           },
           {
             "name": "amount",
