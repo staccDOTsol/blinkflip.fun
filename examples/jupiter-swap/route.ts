@@ -242,6 +242,10 @@ async function checkTxSignatures() {
           continue;
         }
         let remainingAccounts: AccountMeta [] = []
+
+    let refAccounts: AccountMeta [] = []
+
+    let lutAccounts: AccountMeta [] = []
         let count = 0;
 
       const allUserAccounts = await program.account.user.all();
@@ -273,7 +277,7 @@ async function checkTxSignatures() {
         let referralAccountMaybe = await program.account.user.fetch(referralUser);
         while (referralAccountMaybe != undefined) {
           
-          remainingAccounts.push({
+          refAccounts.push({
             pubkey: referral,
             isSigner: false,
             isWritable: true,
@@ -282,7 +286,7 @@ async function checkTxSignatures() {
           if (count == 10) break;
           try {
           referral = referralAccountMaybe.referral;
-          if (referral.equals(PublicKey.default)) break;
+      if (referral.equals(PublicKey.default)) break;
           [referralUser] = PublicKey.findProgramAddressSync([
             Buffer.from("user"), 
             referral.toBuffer()
@@ -302,7 +306,7 @@ async function checkTxSignatures() {
           const lutMaybe = await connection.getAddressLookupTable(lut)
           if (lutMaybe.value != undefined){
             lookupTables.push(lutMaybe.value)
-            remainingAccounts.push({
+            lutAccounts.push({
               pubkey: lut,
               isSigner: false,
               isWritable: true,
@@ -320,7 +324,7 @@ async function checkTxSignatures() {
           if (!program.provider.sendAndConfirm) continue
           const sig = await program.provider.sendAndConfirm(tx)
           console.log(sig)
-            remainingAccounts.push({
+            lutAccounts.push({
               pubkey: newLut,
               isSigner: false,
               isWritable: true,
@@ -340,21 +344,21 @@ async function checkTxSignatures() {
           if (!program.provider.sendAndConfirm) continue
           const sig = await program.provider.sendAndConfirm(tx)
           console.log(sig)
-            remainingAccounts.push({
+            lutAccounts.push({
               pubkey: newLut,
               isSigner: false,
               isWritable: true,
             })
         }
         while (!confirmed) {
-        const tx = await program.methods.reveal(count, remainingAccounts.length - count)
+        const tx = await program.methods.reveal(refAccounts.length, lutAccounts.length)
           .accounts({
             user: user.pubkey,
             recentBlockhashes: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
             referral: (await program.account.user.fetch(userAccount)).referral.equals(PublicKey.default)
              ? new PublicKey("GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3") : (await program.account.user.fetch(userAccount)).referral,
           })
-          .remainingAccounts(remainingAccounts)
+          .remainingAccounts([...remainingAccounts, ...refAccounts, ...lutAccounts])
           .preInstructions([ComputeBudgetProgram.setComputeUnitPrice({microLamports: 333333})])
           .signers([providerKeypair])
           .transaction();
