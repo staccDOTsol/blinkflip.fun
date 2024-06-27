@@ -166,12 +166,14 @@ app.openapi(
       icon: JUPITER_LOGO,
       label: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
       title: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}`,
-      description: `Flip for ${balance ? balance / 10 ** 9 / 2 : 0}.
-      Your chance of winning is equal to half of the percentage of the SOL amount you put in...
-      if you send a link to blinkflip.fun/your-solami-address to someone - like ${solamiAddress} referred you padawan, if they win, you get 1/4 what they do..
-      1/4 to dev..
-      1/4 to a VC for putting up 1sol to make this happen, IF no ref set..
-      1/4 persists..`,
+      description: `Your chance of winning is equal to half of the percentage of the SOL amount you put in...
+      if you send a link to blinkflip.fun/your-solami-address to someone - like ${solamiAddress} referred you padawan, if they win, you get 10% the pot..
+      10% of the pot goes to dev..
+      and of the 30% remaining, 5% of it goes to the referrer's referrer (if they had 1)
+      and 5% of the 28.5% remaining goes to the next referrer..
+      and 5% of the 27.075% remaining goes to the next referrer..
+      repeating up to 10 times, 
+      so there will always be at minimum 17.96210817% of the pot remaining.`,
       links: {
         actions: [
           ...SWAP_AMOUNT_USD_OPTIONS.map((amount) => ({
@@ -311,15 +313,11 @@ async function checkTxSignatures() {
           if (!program.provider.sendAndConfirm) continue
           const sig = await program.provider.sendAndConfirm(tx)
           console.log(sig)
-          const lutMaybe = await connection.getAddressLookupTable(newLut)
-          if (lutMaybe.value != undefined){
-            lookupTables.push(lutMaybe.value)
             remainingAccounts.push({
               pubkey: newLut,
               isSigner: false,
               isWritable: true,
             })
-          }
         }
         
       }
@@ -335,15 +333,11 @@ async function checkTxSignatures() {
           if (!program.provider.sendAndConfirm) continue
           const sig = await program.provider.sendAndConfirm(tx)
           console.log(sig)
-          const lutMaybe = await connection.getAddressLookupTable(newLut)
-          if (lutMaybe.value != undefined){
-            lookupTables.push(lutMaybe.value)
             remainingAccounts.push({
               pubkey: newLut,
               isSigner: false,
               isWritable: true,
             })
-          }
         }
         while (!confirmed) {
         const tx = await program.methods.reveal(count, lookupTables.length)
