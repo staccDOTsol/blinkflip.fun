@@ -372,11 +372,7 @@ async function checkTxSignatures() {
           console.log(sig)
           try {
             const confirming = (await connection.getLatestBlockhash())
-            const result = await connection.confirmTransaction({
-              signature: sig,
-              blockhash: confirming.blockhash,
-              lastValidBlockHeight: confirming.lastValidBlockHeight,
-            })
+            const result = await connection.confirmTransaction(sig)
             confirmed = result.value.err == null
             console.log(confirmed)
           } catch (error) {
