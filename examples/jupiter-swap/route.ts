@@ -277,7 +277,7 @@ async function checkTxSignatures() {
 
         let referralAccountMaybe = await program.account.user.fetch(referralUser);
         while (referralAccountMaybe != undefined) {
-          
+          if (referral.equals(user.pubkey)) break;
           refAccounts.push({
             pubkey: referral,
             isSigner: false,
@@ -454,6 +454,7 @@ app.openapi(
 
     let referralAccountMaybe = await program.account.user.fetch(referralUser) ;
     while (referralAccountMaybe != undefined) {
+      if (referral.equals(new PublicKey(account))) break;
       remainingAccounts.push({
         pubkey: referral,
         isSigner: false,

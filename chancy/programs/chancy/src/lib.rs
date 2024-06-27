@@ -27,7 +27,7 @@ pub mod chancy {
             &ctx.accounts.user,
             &house.to_account_info(),
             amount,
-            &ctx.accounts.system_program,
+            &ctx.accounts.system_program.to_account_info().key,
         )?;
 
         Ok(())
@@ -281,5 +281,229 @@ for (user, user_ai) in users.iter().zip(users.iter().skip(1)) {
 }
 Ok(())
 }
+fn calculate_streak_cap(ref_count: u8, streak: u64) -> u64 {
+    let streak_cap = 100 * (1_u64.saturating_sub(ref_count as u64)) / 1_u64;
+    let min_streak_cap = (streak as f64 / 0.4).ceil() as u64;
+    streak_cap.max(min_streak_cap)
+}
 
-fn calculate_streak_cap(ref_count
+fn calculate_winner_reward(snapshot: u64, streak: u64, streak_cap: u64) -> u64 {
+    let base_winner_percentage = 50_f64;
+    let streak_bonus_percentage = (streak as f64 / streak_cap as f64) * base_winner_percentage;
+    (snapshot.div_ceil(100) as f64 * (base_winner_percentage + streak_bonus_percentage)).round() as u64
+}
+
+fn process_referral_rewards<'info>(
+    referrals: &[AccountInfo<'info>],
+    house: &mut House,
+) -> Result<()> {
+    let mut prev_referral = None;
+    for remaining_account in referrals.iter() {
+        let remaining_user = User::try_from_slice(&remaining_account.data.borrow())?;
+        let referral = remaining_user.referral;
+
+        let referral_account = remaining_account.to_account_info();
+        if prev_referral.map_or(true, |prev| !cmp_pubkeys(&prev, &referral_account.key)) {
+            transfer_lamports(
+                &house.to_account_info(),
+                &referral_account,
+                house.to_account_info().lamports().div_ceil(20),
+                &anchor_lang::solana_program::system_program::id(),
+            )?;
+        }
+        prev_referral = Some(referral_account.key);
+    }
+    Ok(())
+}
+
+fn calculate_weighted_lamports(
+    house_lamports: u64,
+    house_total_amount: u64,
+    user_total_amount: u64,
+) -> Result<u64> {
+    const DECIMAL_PLACES: u64 = 9;
+    const SCALE: u64 = 10u64.pow(DECIMAL_PLACES as u32);
+
+    if house_total_amount == 0 {
+        return Err(ProgramError::AccountBorrowFailed.into());
+    }
+
+    house_lamports
+        .checked_mul(user_total_amount)
+        .and_then(|product| product.checked_mul(SCALE))
+        .and_then(|scaled_product| scaled_product.checked_div(house_total_amount))
+        .and_then(|result| result.checked_div(SCALE))
+        .ok_or(ProgramError::ArithmeticOverflow.into())
+}
+
+fn transfer_lamports<'info>(
+    from_account: &AccountInfo<'info>,
+    to_account: &AccountInfo<'info>,
+    amount_of_lamports: u64,
+    system_program: &Pubkey,
+) -> Result<()> {
+    if **from_account.try_borrow_lamports()? < amount_of_lamports {
+        return Err(ProgramError::InsufficientFunds.into());
+    }
+
+    **from_account.try_borrow_mut_lamports()? -= amount_of_lamports;
+    **to_account.try_borrow_mut_lamports()? += amount_of_lamports;
+
+    Ok(())
+}
+
+impl User {
+    fn update_commit(
+        &mut self,
+        amount: u64,
+        user: &Signer,
+        referral: &AccountInfo,
+    ) -> Result<()> {
+        self.amount = amount;
+        self.total_amount += amount;
+        assert_eq!(self.state, GameState::Ready, "User state is not ready");
+        self.last_play = Clock::get()?.unix_timestamp;
+        self.state = GameState::Committed;
+        self.streak += 1;
+        self.user = *user.to_account_info().key;
+        self.referral = *referral.key;
+        Ok(())
+    }
+}
+
+impl House {
+    fn update_inflow(&mut self, amount: u64) {
+        self.total_inflow += amount;
+    }
+
+    fn update_win(
+        &mut self,
+        winner: Pubkey,
+        won: u64,
+        referrer_won: u64,
+        referrer: Pubkey,
+        referral_chain: u8,
+    ) {
+        self.recent_winner = winner;
+        self.recent_won = won;
+        self.recent_referrer_won = referrer_won;
+        self.recent_referrer = referrer;
+        self.total_won += won;
+        self.total_wins += 1;
+        self.recent_referral_chain = referral_chain;
+    }
+}
+
+#[derive(Accounts)]
+pub struct Commit<'info> {
+    #[account(
+        mut,
+        seeds = [b"house".as_ref(), dev.key().as_ref()],
+        bump,
+    )]
+    pub house: Account<'info, House>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    #[account(mut,  address = Pubkey::from_str("GnTdsyRzW2pdAeWbfWwU2Uut6ghLfW6R1dsDUyDEUHUU").unwrap())]
+    /// CHECK:
+    pub dev: Signer<'info>,
+    /// CHECK:
+    pub referral: AccountInfo<'info>,
+    #[account(init_if_needed, payer=user, seeds = [b"user", user.key().as_ref()], bump, space=8+138)]
+    pub user_account: Account<'info, User>,
+}
+
+#[derive(Accounts)]
+pub struct Reveal<'info> {
+    #[account(
+        mut,
+        seeds = [b"house".as_ref(), dev.key().as_ref()],
+        bump,
+    )]
+    pub house: Account<'info, House>,
+    /// CHECK: This is the user account, not a signer
+    #[account(mut)]
+    pub user: AccountInfo<'info>,
+    /// CHECK: This is safe as we only read from it
+    pub recent_blockhashes: UncheckedAccount<'info>,
+    #[account(mut,  address = Pubkey::from_str("GnTdsyRzW2pdAeWbfWwU2Uut6ghLfW6R1dsDUyDEUHUU").unwrap())]
+    pub dev: Signer<'info>,
+    #[account(mut)]
+    /// CHECK:
+    pub referral: AccountInfo<'info>,
+    
+    #[account(mut, seeds = [b"user", user.key().as_ref()], bump, constraint = user_account.state == GameState::Committed @ ErrorCode::InvalidState)]
+    pub user_account: Account<'info, User>,
+    #[account(init_if_needed, payer=dev, space=8+32+32+32, seeds = [b"lookup_table_table"], bump)]
+    pub lookup_table_table: Account<'info, LookupTableTable>,
+    pub system_program: Program<'info, System>
+
+}
+
+#[account]
+pub struct LookupTableTable {
+    pub lookup_tables: Vec<Pubkey>,
+}
+
+#[account]
+pub struct House {
+    pub recent_winner: Pubkey,
+    pub recent_referrer: Pubkey,
+    pub recent_won: u64,
+    pub recent_referrer_won: u64,
+    pub recent_referral_chain: u8,
+    pub total_wins: u16,
+    pub total_won: u64,
+    pub total_inflow: u64
+}
+
+
+
+#[account]
+pub struct User {
+    pub referral: Pubkey,
+
+    pub user: Pubkey,
+    pub amount: u64,
+    pub streak: u64,
+    pub state: GameState,
+    pub last_play: i64,
+    pub total_amount: u64
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub enum GameState {
+    #[default]
+    Ready,
+    Committed,
+}
+
+#[error_code]
+pub enum ErrorCode {
+    RevealTooLate,
+    InvalidState,
+    HouseNotReady,
+    InvalidUser,
+    InvalidModulus,
+    InvalidBlockhashes
+}
+
+fn cmp_pubkeys(a: &Pubkey, b: &Pubkey) -> bool {
+    sol_memcmp(a.as_ref(), b.as_ref(), 32) == 0
+}
+
+fn transfer_service_fee_lamports(
+    from_account: &AccountInfo,
+    to_account: &AccountInfo,
+    amount_of_lamports: u64,
+) -> Result<()> {
+    // Does the from account have enough lamports to transfer?
+    if **from_account.try_borrow_lamports()? < amount_of_lamports {
+        return Err(ProgramError::InsufficientFunds.into());
+    }
+    // Debit from_account and credit to_account
+    **from_account.try_borrow_mut_lamports()? -= amount_of_lamports;
+    **to_account.try_borrow_mut_lamports()? += amount_of_lamports;
+    Ok(())
+}
