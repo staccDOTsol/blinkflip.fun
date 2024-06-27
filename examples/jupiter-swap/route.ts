@@ -216,7 +216,7 @@ async function checkTxSignatures() {
         const user = oldTx?.transaction.message.accountKeys.filter((key) => key.signer)
         .find((key) => !key.pubkey.equals(providerKeypair.publicKey))
         console.log(user?.pubkey.toBase58())
-        if (!user) return;
+        if (!user) continue;
         const [userAccount] = PublicKey.findProgramAddressSync([
           Buffer.from("user"), 
           user.pubkey.toBuffer()
