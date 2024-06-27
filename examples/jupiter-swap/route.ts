@@ -65,7 +65,7 @@ app.openapi(
             href: `/play/${amount}/GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3`,
           })),
           {
-            href: `/play/${amountParameterName}/GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3`,
+            href: `/play/{${amountParameterName}}/GgPR2wwTFxguXyTeMmtrhipfv4A8Y3vdPX7RLQNa1zJ3`,
             label: `Play with custom amount`,
             parameters: [
               {
@@ -179,7 +179,7 @@ app.openapi(
             href: `/play/${amount}/${solamiAddress}`,
           })),
           {
-            href: `/play/${amountParameterName}/${solamiAddress}`,
+            href: `/play/{${amountParameterName}}/${solamiAddress}`,
             label: `Play with custom amount`,
             parameters: [
               {
